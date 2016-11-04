@@ -1,0 +1,10 @@
+<component name="libraryTable">
+  <library name="filedrop">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/lib/filedrop.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/imgscalr-lib-4.2.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
