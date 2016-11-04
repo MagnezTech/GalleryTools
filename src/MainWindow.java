@@ -1,15 +1,21 @@
+import javafx.scene.input.KeyCode;
 import org.imgscalr.Scalr;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
+import javax.swing.border.Border;
 import javax.swing.text.DefaultFormatter;
 import java.awt.*;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.Transferable;
+import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
@@ -37,7 +43,9 @@ public class MainWindow {
     private JCheckBox keepOryginalCheckBox;
     private JComboBox qualityComboBox;
     private JComboBox modeComboBox;
-    private JScrollBar scrollBar1;
+    private JScrollPane previewScroll;
+    private JButton fire;
+    private DefaultListModel model;
 
     public MainWindow() {
         qualityComboBox.setModel(new DefaultComboBoxModel<>(Scalr.Method.values()));
@@ -49,7 +57,7 @@ public class MainWindow {
             @Override
             public void actionPerformed(ActionEvent e) {
                 JFileChooser chooser = new JFileChooser();
-                chooser.setCurrentDirectory(new java.io.File("."));
+                chooser.setCurrentDirectory(new java.io.File("C:"));
                 chooser.setDialogTitle("Wybierz katalog docelowy");
                 chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
                 chooser.setAcceptAllFileFilterUsed(false);
@@ -77,44 +85,71 @@ public class MainWindow {
         formatter.setCommitsOnValidEdit(true);
         new FileDrop(System.out, mainPanel, new FileDrop.Listener() {
             public void filesDropped(java.io.File[] files) {
-                boolean resize = changeSizeCheckBox.isSelected();
-                boolean keepOriginal = keepOryginalCheckBox.isSelected();
-                int maxWidth = 0;
-                int maxHeight = 0;
-                if (resize) {
-                    maxWidth = Integer.valueOf(maxWidthTextField.getText());
-                    maxHeight = Integer.valueOf(maxHeightTextField.getText());
-                }
-                String newPath = targetDirectoryTextField.getText() + "\\" + prefixTextField.getText();
-                for (int i = 0; i < files.length; i++) {
-                    File newFile = new File(currentNumber(newPath) + ".jpg");
-                    try {
-                        if (resize) {
-                            BufferedImage srcImage = ImageIO.read(files[i]);
-                            BufferedImage scaledImage = Scalr.resize(srcImage, (Scalr.Method) qualityComboBox.getSelectedItem(), (Scalr.Mode) modeComboBox.getSelectedItem(), maxWidth, maxHeight);
-                            ImageIO.write(scaledImage, "jpg", newFile);
-                            if (!keepOriginal) {
-                                files[i].delete();
-                            }
-                        } else {
-                            if (keepOriginal) {
-                                Files.copy(files[i].toPath(), newFile.toPath());
-                            } else {
-                                files[i].renameTo(newFile);
-                            }
-                        }
-                        currentNumberSpinner.setValue(new Integer((Integer) currentNumberSpinner.getValue()) + 1);
-                        log(files[i].getName());
-                    } catch (FileAlreadyExistsException e) {
-                        log("PLIK JUŻ ISTNIEJE: " + newFile.getPath());
-                        System.err.println(e);
-                    } catch (AccessDeniedException e) {
-                        log("BRAK DOSTEPU DO KATALOGU: " + e.getMessage());
-                        System.err.println(e);
+                for (File file : files) {
+                    try{
+                        BufferedImage iconImage = Scalr.resize(ImageIO.read(file), Scalr.Method.AUTOMATIC, Scalr.Mode.AUTOMATIC, 100, 100);
+                        ImagePreview newPreview = new ImagePreview(iconImage, file.getName(), file.getCanonicalPath());
+                        model.addElement(newPreview);
                     } catch (Exception e) {
-                        log("BŁĄD: " + e.toString());
-                        System.err.println(e);
+                        e.printStackTrace();
                     }
+                }
+            }
+        });
+        fire.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try{
+                    fire.setEnabled(false);
+                    boolean resize = changeSizeCheckBox.isSelected();
+                    boolean keepOriginal = keepOryginalCheckBox.isSelected();
+                    int maxWidth = 0;
+                    int maxHeight = 0;
+                    if (resize) {
+                        maxWidth = Integer.valueOf(maxWidthTextField.getText());
+                        maxHeight = Integer.valueOf(maxHeightTextField.getText());
+                    }
+                    String newPath = targetDirectoryTextField.getText() + "\\" + prefixTextField.getText();
+
+                    for (Object o : model.toArray()) {
+                        ImagePreview image = (ImagePreview) o;
+                        File file = new File(image.getPath());
+
+                        File newFile = new File(currentNumber(newPath) + ".jpg");
+                        try {
+                            BufferedImage srcImage = ImageIO.read(file);
+                            if (resize) {
+                                BufferedImage scaledImage = Scalr.resize(srcImage, (Scalr.Method) qualityComboBox.getSelectedItem(), (Scalr.Mode) modeComboBox.getSelectedItem(), maxWidth, maxHeight);
+                                ImageIO.write(scaledImage, "jpg", newFile);
+                                if (!keepOriginal) {
+                                    file.delete();
+                                }
+                            } else {
+                                if (keepOriginal) {
+                                    Files.copy(file.toPath(), newFile.toPath());
+                                } else {
+                                    file.renameTo(newFile);
+                                }
+                            }
+                            currentNumberSpinner.setValue(new Integer((Integer) currentNumberSpinner.getValue()) + 1);
+                            log(file.getName());
+                        } catch (FileAlreadyExistsException ex) {
+                            log("PLIK JUŻ ISTNIEJE: " + newFile.getPath());
+                            ex.printStackTrace();
+                        } catch (AccessDeniedException ex) {
+                            log("BRAK DOSTEPU DO KATALOGU: " + ex.getMessage());
+                            ex.printStackTrace();
+                        } catch (Exception ex) {
+                            log("BŁĄD: " + ex.toString());
+                            ex.printStackTrace();
+                        }
+                        mainPanel.repaint();
+                    }
+
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                } finally {
+                    fire.setEnabled(true);
                 }
             }
         });
@@ -140,12 +175,161 @@ public class MainWindow {
         }
     }
 
-    public static void main(String[] args) {
+    private JList createImageList() {
+
+        final JList imageList = new JList(createModel());
+        imageList.setCellRenderer(new ImageCellRenderer());
+        imageList.setLayoutOrientation(JList.HORIZONTAL_WRAP);
+        imageList.setVisibleRowCount(-1);
+        imageList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        imageList.setFixedCellWidth(100);
+        imageList.setFixedCellHeight(120);
+        imageList.setDragEnabled(true);
+        imageList.setDropMode(DropMode.INSERT);
+        imageList.setTransferHandler(new ImageTransferHandler(imageList));
+        imageList.addKeyListener(new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+                if (e.getKeyChar() == KeyEvent.VK_DELETE) {
+                    try {
+                        ((DefaultListModel) imageList.getModel()).remove(imageList.getSelectedIndex());
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                }
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e) {
+
+            }
+        });
+        return imageList;
+    }
+
+    private DefaultListModel createModel() {
+        model = new DefaultListModel();
+        return model;
+    }
+
+    private void createUIComponents() {
+        previewScroll = new JScrollPane(createImageList());
+    }
+
+    class ImageTransferHandler extends TransferHandler {
+
+        private final DataFlavor DATA_FLAVOUR = new DataFlavor(ImagePreview.class, "Images");
+
+        private final JList previewList;
+        private boolean inDrag;
+
+        ImageTransferHandler(JList previewList) {
+            this.previewList = previewList;
+        }
+
+        public int getSourceActions(JComponent c) {
+            return TransferHandler.MOVE;
+        }
+
+        protected Transferable createTransferable(JComponent c) {
+            inDrag = true;
+            return new Transferable() {
+                public DataFlavor[] getTransferDataFlavors() {
+                    return new DataFlavor[] {DATA_FLAVOUR};
+                }
+
+                public boolean isDataFlavorSupported(DataFlavor flavor) {
+                    return flavor.equals(DATA_FLAVOUR);
+                }
+
+                public Object getTransferData(DataFlavor flavor) throws UnsupportedFlavorException, IOException {
+                    return previewList.getSelectedValue();
+                }
+            };
+        }
+
+        public boolean canImport(TransferSupport support) {
+            if (!inDrag || !support.isDataFlavorSupported(DATA_FLAVOUR)) {
+                return false;
+            }
+
+            JList.DropLocation dl = (JList.DropLocation)support.getDropLocation();
+            if (dl.getIndex() == -1) {
+                return false;
+            } else {
+                return true;
+            }
+        }
+
+        public boolean importData(TransferSupport support) {
+            if (!canImport(support)) {
+                return false;
+            }
+
+            Transferable transferable = support.getTransferable();
+            try {
+                Object draggedImage = transferable.getTransferData(DATA_FLAVOUR);
+
+                JList.DropLocation dl = (JList.DropLocation)support.getDropLocation();
+                DefaultListModel model = (DefaultListModel)previewList.getModel();
+                int dropIndex = dl.getIndex();
+                if (model.indexOf(draggedImage) < dropIndex) {
+                    dropIndex--;
+                }
+                model.removeElement(draggedImage);
+                model.add(dropIndex, draggedImage);
+                return true;
+            } catch (Exception e) {
+                e.printStackTrace();
+                return false;
+            }
+        }
+
+        protected void exportDone(JComponent source, Transferable data, int action) {
+            super.exportDone(source, data, action);
+            inDrag = false;
+        }
+    }
+
+    class ImageCellRenderer extends JPanel implements ListCellRenderer {
+
+        DefaultListCellRenderer defaultListCellRenderer = new DefaultListCellRenderer();
+        JLabel imageLabel = new JLabel();
+        JLabel textLabel = new JLabel();
+
+        ImageCellRenderer() {
+            setLayout(new BorderLayout());
+            Border emptyBorder = BorderFactory.createEmptyBorder(1, 1, 1, 1);
+            imageLabel.setBorder(emptyBorder);
+            add(imageLabel, BorderLayout.NORTH);
+            textLabel.setBorder(emptyBorder);
+            add(textLabel, BorderLayout.SOUTH);
+        }
+
+        public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+            defaultListCellRenderer.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+            setBorder(defaultListCellRenderer.getBorder());
+            setBackground(defaultListCellRenderer.getBackground());
+            imageLabel.setIcon(new ImageIcon(((ImagePreview) value).getImage()));
+            textLabel.setText(((ImagePreview) value).getDiscription());
+            return this;
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+        UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         JFrame frame = new JFrame("MainWindow");
+        frame.setLocationByPlatform(true);
         frame.setContentPane(new MainWindow().mainPanel);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setMinimumSize(new Dimension(690, 250));
+        frame.setMinimumSize(new Dimension(800, 600));
         frame.pack();
         frame.setVisible(true);
     }
+
 }
