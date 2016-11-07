@@ -45,6 +45,7 @@ public class MainWindow {
     private JComboBox modeComboBox;
     private JScrollPane previewScroll;
     private JButton fire;
+    private JProgressBar progress;
     private DefaultListModel model;
 
     public MainWindow() {
@@ -85,72 +86,13 @@ public class MainWindow {
         formatter.setCommitsOnValidEdit(true);
         new FileDrop(System.out, mainPanel, new FileDrop.Listener() {
             public void filesDropped(java.io.File[] files) {
-                for (File file : files) {
-                    try{
-                        BufferedImage iconImage = Scalr.resize(ImageIO.read(file), Scalr.Method.AUTOMATIC, Scalr.Mode.AUTOMATIC, 100, 100);
-                        ImagePreview newPreview = new ImagePreview(iconImage, file.getName(), file.getCanonicalPath());
-                        model.addElement(newPreview);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
+                new ReadPhotos(files).execute();
             }
         });
         fire.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                try{
-                    fire.setEnabled(false);
-                    boolean resize = changeSizeCheckBox.isSelected();
-                    boolean keepOriginal = keepOryginalCheckBox.isSelected();
-                    int maxWidth = 0;
-                    int maxHeight = 0;
-                    if (resize) {
-                        maxWidth = Integer.valueOf(maxWidthTextField.getText());
-                        maxHeight = Integer.valueOf(maxHeightTextField.getText());
-                    }
-                    String newPath = targetDirectoryTextField.getText() + "\\" + prefixTextField.getText();
-
-                    for (Object o : model.toArray()) {
-                        ImagePreview image = (ImagePreview) o;
-                        File file = new File(image.getPath());
-
-                        File newFile = new File(currentNumber(newPath) + ".jpg");
-                        try {
-                            BufferedImage srcImage = ImageIO.read(file);
-                            if (resize) {
-                                BufferedImage scaledImage = Scalr.resize(srcImage, (Scalr.Method) qualityComboBox.getSelectedItem(), (Scalr.Mode) modeComboBox.getSelectedItem(), maxWidth, maxHeight);
-                                ImageIO.write(scaledImage, "jpg", newFile);
-                                if (!keepOriginal) {
-                                    file.delete();
-                                }
-                            } else {
-                                if (keepOriginal) {
-                                    Files.copy(file.toPath(), newFile.toPath());
-                                } else {
-                                    file.renameTo(newFile);
-                                }
-                            }
-                            currentNumberSpinner.setValue(new Integer((Integer) currentNumberSpinner.getValue()) + 1);
-                            log(file.getName());
-                        } catch (FileAlreadyExistsException ex) {
-                            log("PLIK JUŻ ISTNIEJE: " + newFile.getPath());
-                            ex.printStackTrace();
-                        } catch (AccessDeniedException ex) {
-                            log("BRAK DOSTEPU DO KATALOGU: " + ex.getMessage());
-                            ex.printStackTrace();
-                        } catch (Exception ex) {
-                            log("BŁĄD: " + ex.toString());
-                            ex.printStackTrace();
-                        }
-                        mainPanel.repaint();
-                    }
-
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                } finally {
-                    fire.setEnabled(true);
-                }
+                new GeneratePhotos().execute();
             }
         });
     }
@@ -325,6 +267,120 @@ public class MainWindow {
             imageLabel.setIcon(new ImageIcon(((ImagePreview) value).getImage()));
             textLabel.setText(((ImagePreview) value).getDiscription());
             return this;
+        }
+    }
+
+    private class ReadPhotos extends SwingWorker {
+        private File[] files;
+
+        public ReadPhotos(File[] files) {
+            this.files = files;
+        }
+
+        @Override
+        public String doInBackground() {
+            progress.setValue(0);
+            double perPhoto = 100.0 / files.length;
+            double percent = 0;
+            for (File file : files) {
+                try{
+                    BufferedImage iconImage = Scalr.resize(ImageIO.read(file), Scalr.Method.AUTOMATIC, Scalr.Mode.AUTOMATIC, 100, 100);
+                    ImagePreview newPreview = new ImagePreview(iconImage, file.getName(), file.getCanonicalPath());
+                    model.addElement(newPreview);
+                    percent += perPhoto;
+                    progress.setValue((int) Math.round(percent));
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+            return null;
+        }
+
+        @Override
+        protected void done() {
+            progress.setValue(100);
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            progress.setValue(0);
+        }
+    }
+
+    private class GeneratePhotos extends SwingWorker {
+
+        @Override
+        public String doInBackground() {
+            progress.setValue(0);
+            double perPhoto = 100.0 / model.toArray().length;
+            double percent = 0;
+            try{
+                fire.setEnabled(false);
+                boolean resize = changeSizeCheckBox.isSelected();
+                boolean keepOriginal = keepOryginalCheckBox.isSelected();
+                int maxWidth = 0;
+                int maxHeight = 0;
+                if (resize) {
+                    maxWidth = Integer.valueOf(maxWidthTextField.getText());
+                    maxHeight = Integer.valueOf(maxHeightTextField.getText());
+                }
+                String newPath = targetDirectoryTextField.getText() + "\\" + prefixTextField.getText();
+
+                for (Object o : model.toArray()) {
+                    ImagePreview image = (ImagePreview) o;
+                    File file = new File(image.getPath());
+
+                    File newFile = new File(currentNumber(newPath) + ".jpg");
+                    try {
+                        BufferedImage srcImage = ImageIO.read(file);
+                        if (resize) {
+                            BufferedImage scaledImage = Scalr.resize(srcImage, (Scalr.Method) qualityComboBox.getSelectedItem(), (Scalr.Mode) modeComboBox.getSelectedItem(), maxWidth, maxHeight);
+                            ImageIO.write(scaledImage, "jpg", newFile);
+                            if (!keepOriginal) {
+                                file.delete();
+                            }
+                        } else {
+                            if (keepOriginal) {
+                                Files.copy(file.toPath(), newFile.toPath());
+                            } else {
+                                file.renameTo(newFile);
+                            }
+                        }
+                        currentNumberSpinner.setValue(new Integer((Integer) currentNumberSpinner.getValue()) + 1);
+                        log(file.getName());
+                    } catch (FileAlreadyExistsException ex) {
+                        log("PLIK JUŻ ISTNIEJE: " + newFile.getPath());
+                        ex.printStackTrace();
+                    } catch (AccessDeniedException ex) {
+                        log("BRAK DOSTEPU DO KATALOGU: " + ex.getMessage());
+                        ex.printStackTrace();
+                    } catch (Exception ex) {
+                        log("BŁĄD: " + ex.toString());
+                        ex.printStackTrace();
+                    }
+                    percent += perPhoto;
+                    progress.setValue((int) Math.round(percent));
+                }
+
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            } finally {
+                fire.setEnabled(true);
+            }
+
+            return null;
+        }
+
+        @Override
+        protected void done() {
+            progress.setValue(100);
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            progress.setValue(0);
         }
     }
 
