@@ -1,7 +1,13 @@
-import javafx.scene.input.KeyCode;
 import org.imgscalr.Scalr;
 
+import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.ImageWriter;
+import javax.imageio.stream.FileImageInputStream;
+import javax.imageio.stream.FileImageOutputStream;
+import javax.imageio.stream.ImageInputStream;
+import javax.imageio.stream.ImageOutputStream;
 import javax.swing.*;
 import javax.swing.border.Border;
 import javax.swing.text.DefaultFormatter;
@@ -19,6 +25,7 @@ import java.io.IOException;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
+import java.util.Iterator;
 
 /**
  * Created by mgwozdek on 2016-10-31.
@@ -46,6 +53,8 @@ public class MainWindow {
     private JScrollPane previewScroll;
     private JButton fire;
     private JProgressBar progress;
+    private JCheckBox generujGalerięCheckBox;
+    private JButton chooseGalleryButton;
     private DefaultListModel model;
 
     public MainWindow() {
@@ -93,6 +102,12 @@ public class MainWindow {
             @Override
             public void actionPerformed(ActionEvent e) {
                 new GeneratePhotos().execute();
+            }
+        });
+        chooseGalleryButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+
             }
         });
     }
@@ -292,6 +307,8 @@ public class MainWindow {
         @Override
         protected void done() {
             progress.setValue(100);
+            ((DefaultListModel) listOfFiles.getModel()).addElement("----- WCZYTANO ZDJĘCIA -----");
+            listOfFiles.ensureIndexIsVisible(listOfFiles.getModel().getSize() - 1);
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
@@ -325,11 +342,24 @@ public class MainWindow {
                     File file = new File(image.getPath());
 
                     File newFile = new File(currentNumber(newPath) + ".jpg");
+                    File newFilea = new File(currentNumber(newPath) + "T.jpg");
+
                     try {
-                        BufferedImage srcImage = ImageIO.read(file);
                         if (resize) {
-                            BufferedImage scaledImage = Scalr.resize(srcImage, (Scalr.Method) qualityComboBox.getSelectedItem(), (Scalr.Mode) modeComboBox.getSelectedItem(), maxWidth, maxHeight);
-                            ImageIO.write(scaledImage, "jpg", newFile);
+                            ImageInputStream inputStream = new FileImageInputStream(file);
+                            Iterator<ImageReader> readerIterator = ImageIO.getImageReaders(inputStream);
+                            ImageReader reader = readerIterator.next();
+                            reader.setInput(inputStream);
+                            Iterator<IIOImage> imageIterator = reader.readAll(null);
+                            IIOImage img = imageIterator.next();
+                            BufferedImage srcImage = (BufferedImage) img.getRenderedImage();
+                            BufferedImage resultImage = Scalr.resize(srcImage, (Scalr.Method) qualityComboBox.getSelectedItem(), (Scalr.Mode) modeComboBox.getSelectedItem(), maxWidth, maxHeight);
+                            img.setRenderedImage(resultImage);
+                            ImageWriter writer = ImageIO.getImageWriter(reader);
+                            ImageOutputStream outputStream = new FileImageOutputStream(newFile);
+                            writer.setOutput(outputStream);
+                            writer.write(img);
+
                             if (!keepOriginal) {
                                 file.delete();
                             }
@@ -368,6 +398,8 @@ public class MainWindow {
         @Override
         protected void done() {
             progress.setValue(100);
+            ((DefaultListModel) listOfFiles.getModel()).addElement("----- KONIEC -----");
+            listOfFiles.ensureIndexIsVisible(listOfFiles.getModel().getSize() - 1);
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
