@@ -8,12 +8,11 @@
       <sourceFolder url="file://$MODULE_DIR$/src/main/resources" type="java-resource" />
       <sourceFolder url="file://$MODULE_DIR$/src/test/java" isTestSource="true" />
       <excludeFolder url="file://$MODULE_DIR$/.idea" />
-      <excludeFolder url="file://$MODULE_DIR$/lib" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
-    <orderEntry type="inheritedJdk" />
+    <orderEntry type="jdk" jdkName="1.7" jdkType="JavaSDK" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="library" scope="PROVIDED" name="Maven: org.imgscalr:imgscalr-lib:4.2" level="project" />
+    <orderEntry type="library" name="Maven: org.imgscalr:imgscalr-lib:4.2" level="project" />
     <orderEntry type="module-library">
       <library name="Maven: net.iharder.dnd:filedrop:1.0">
         <CLASSES>
@@ -23,5 +22,11 @@
         <SOURCES />
       </library>
     </orderEntry>
+    <orderEntry type="library" name="Maven: com.intellij:forms_rt:7.0.3" level="project" />
+    <orderEntry type="library" name="Maven: asm:asm-commons:3.0" level="project" />
+    <orderEntry type="library" name="Maven: asm:asm-tree:3.0" level="project" />
+    <orderEntry type="library" name="Maven: asm:asm:3.0" level="project" />
+    <orderEntry type="library" name="Maven: com.jgoodies:forms:1.1-preview" level="project" />
+    <orderEntry type="library" name="Maven: jdom:jdom:1.0" level="project" />
   </component>
 </module>
