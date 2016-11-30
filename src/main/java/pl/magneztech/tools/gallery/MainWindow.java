@@ -173,7 +173,7 @@ public class MainWindow {
         imageList.setCellRenderer(new ImageCellRenderer());
         imageList.setLayoutOrientation(JList.HORIZONTAL_WRAP);
         imageList.setVisibleRowCount(-1);
-        imageList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        imageList.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
         imageList.setFixedCellWidth(100);
         imageList.setFixedCellHeight(120);
         imageList.setDragEnabled(true);
@@ -184,7 +184,12 @@ public class MainWindow {
             public void keyTyped(KeyEvent e) {
                 if (e.getKeyChar() == KeyEvent.VK_DELETE) {
                     try {
-                        ((DefaultListModel) imageList.getModel()).remove(imageList.getSelectedIndex());
+                        DefaultListModel model = (DefaultListModel) imageList.getModel();
+                        for (Object o : imageList.getSelectedValuesList()) {
+                            while (model.contains(o)) {
+                                model.removeElement(o);
+                            }
+                        }
                     } catch (Exception ex) {
                         ex.printStackTrace();
                     }
@@ -389,12 +394,14 @@ public class MainWindow {
         JLabel textLabel = new JLabel();
 
         ImageCellRenderer() {
-            setLayout(new BorderLayout());
+            setLayout(new BoxLayout(this, BoxLayout.PAGE_AXIS));
             Border emptyBorder = BorderFactory.createEmptyBorder(1, 1, 1, 1);
             imageLabel.setBorder(emptyBorder);
-            add(imageLabel, BorderLayout.NORTH);
+            imageLabel.setAlignmentX(new Float(0.5));
+            add(imageLabel);
             textLabel.setBorder(emptyBorder);
-            add(textLabel, BorderLayout.SOUTH);
+            textLabel.setAlignmentX(new Float(0.5));
+            add(textLabel);
         }
 
         public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected, boolean cellHasFocus) {

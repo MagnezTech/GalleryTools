@@ -1,32 +1,25 @@
 import java.awt.*;
-import java.util.*;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Scanner;
+import java.util.TreeMap;
 
-/**
- * Grab Snaffles and try to throw them through the opponent's goal!
- * Move towards a Snaffle and use your team id to determine where you need to throw it.
- **/
 class Player {
     static int team = 1;
+    static int initial = 2;
+
     public static void main(String args[]) {
         Scanner in = new Scanner(System.in);
         int myTeamId = in.nextInt(); // if 0 you need to score on the right of the map, if 1 you need to score on the left
-        team = myTeamId == 0 ? 1 : -1 ;
-        //List<Wizard> wizards = new ArrayList<>();
-        Wizard defender = null;
-        Wizard shooter = null;
-        //List<Wizard> opponent = new ArrayList<>();
-        List<Ball> balls = new ArrayList<>();
-        //List<Ball> bludgers = new ArrayList<>();
+        team = myTeamId == 0 ? 1 : -1;
+        Map<Integer, Entity> entitiesMap = new HashMap<>();
+        Map<Integer, Ball> balls;
 
-        // game loop
+        Wizard shooter = null;
+        Wizard defender = null;
+
         while (true) {
-            //wizards.clear();
-            defender = null;
-            shooter = null;
-            //opponent.clear();
-            balls.clear();
-            //bludgers.clear();
+            entitiesMap.clear();
             int entities = in.nextInt(); // number of entities still in game
             for (int i = 0; i < entities; i++) {
                 int entityId = in.nextInt(); // entity identifier
@@ -36,193 +29,251 @@ class Player {
                 int vx = in.nextInt(); // velocity
                 int vy = in.nextInt(); // velocity
                 int state = in.nextInt(); // 1 if the wizard is holding a Snaffle, 0 otherwise
-
+                Entity entity;
                 if ("WIZARD".equals(entityType)) {
-                    if (defender == null) {
-                        defender = new Wizard(x, y, vx, vy, state == 1);
-                    } else {
-                        shooter = new Wizard(x, y, vx, vy, state == 1);
-                    }
+                    entity = new Wizard(entityId, entityType, x, y, vx, vy, state);
                 } else if ("OPPONENT_WIZARD".equals(entityType)) {
-                    //opponent.add(new Wizard(x, y, vx, vy, state == 1));
+                    entity = new Wizard(entityId, entityType, x, y, vx, vy, state);
                 } else if ("SNAFFLE".equals(entityType)) {
-                    balls.add(new Ball(x, y, vx, vy));
-                } else if ("BLUDGER".equals(entityType)) {
-                    //bludgers.add(new Ball(x, y, vx, vy));
+                    entity = new Ball(entityId, entityType, x, y, vx, vy, state);
+                } else {
+                    entity = new Entity(entityId, entityType, x, y, vx, vy, state);
                 }
+                entitiesMap.put(entityId, entity);
             }
 
-                // Write an action using System.out.println()
-                // To debug: System.err.println("Debug messages...");
-                // Edit this line to indicate the action for each wizard (0 <= thrust <= 150, 0 <= power <= 500)
-                // i.e.: "MOVE x y thrust" or "THROW x y power"
-
-            if (defender.isGotBall() && shooter.isGotBall()) {
-                throwBall(defender);
-                throwBall(shooter);
-            } else if (defender.isGotBall() && !shooter.isGotBall()) {
-                throwBall(defender);
-                attack(balls, shooter);
-            } else if (!defender.isGotBall() && shooter.isGotBall()) {
-                def(balls, defender);
-                throwBall(shooter);
+            balls = findBalls(entitiesMap);
+            if (initial == 2) {
+                initial = 1;
+                for (Entity e : entitiesMap.values()) {
+                    if (e.isWizard()) {
+                        if (shooter == null) {
+                            shooter = (Wizard) e;
+                        } else {
+                            defender = (Wizard) e;
+                        }
+                    }
+                }
+//                findWizards(entitiesMap, shooter, defender);
+                findShooterAndDefender(balls, shooter, defender);
             } else {
-                moveToClosest(balls, defender, shooter);
+                shooter = (Wizard) entitiesMap.get(shooter.getEntityId());
+                defender = (Wizard) entitiesMap.get(defender.getEntityId());
+            }
+            prepereDefenderMove(defender, balls, entitiesMap);
+            prepereShooterMove(shooter, balls, entitiesMap);
+//            prepereShooterMove(defender, balls, entitiesMap);
+            System.out.println(shooter.getMove());
+            System.out.println(defender.getMove());
+        }
+    }
+
+    private static void prepereDefenderMove(Wizard shooter, Map<Integer, Ball> balls, Map<Integer, Entity> entitiesMap) {
+        if (shooter.hasBall()) {
+            shooter.setMove(throwWithVector(shooter, entitiesMap));
+        } else {
+            TreeMap<Double, Ball> distances = new TreeMap<>();
+            distances.put(2200.0, new Ball(100, "NIC", 300, 3750, 0, 0, 0));
+            for (Ball ball : balls.values()) {
+                if (ball == null || ball.taken()) continue;
+                distances.put(Point.distance(ball.getX(), ball.getY(), shooter.getX(), shooter.getY()), ball);
+            }
+            Ball closest = distances.firstEntry().getValue();
+            closest.setTaken(true);
+            shooter.setMove("MOVE " + closest.getX() + " " + closest.getY() + " 150");
+        }
+    }
+
+    private static void prepereShooterMove(Wizard shooter, Map<Integer, Ball> balls, Map<Integer, Entity> entitiesMap) {
+        if (shooter.hasBall()) {
+            shooter.setMove(throwWithVector(shooter, entitiesMap));
+        } else {
+            TreeMap<Double, Ball> distances = new TreeMap<>();
+            for (Ball ball : balls.values()) {
+                if (ball == null || ball.taken()) continue;
+                distances.put(Point.distance(ball.getX(), ball.getY(), shooter.getX(), shooter.getY()), ball);
+            }
+            Ball closest = distances.firstEntry().getValue();
+            closest.setTaken(true);
+            shooter.setMove("MOVE " + closest.getX() + " " + closest.getY() + " 150");
+        }
+    }
+
+//    private static void findWizards(Map<Integer, Entity> entitiesMap, Wizard shooter, Wizard defender) {
+//        for (Entity e : entitiesMap.values()) {
+//            if (e.isWizard()) {
+//                if (shooter == null) {
+//                    shooter = (Wizard) e;
+//                } else {
+//                    defender = (Wizard) e;
+//                }
+//            }
+//        }
+//    }
+
+    private static Map<Integer, Ball> findBalls(Map<Integer, Entity> entitiesMap) {
+        Map<Integer, Ball> newB = new HashMap<>();
+        for (Entity e : entitiesMap.values()) {
+            if (e.isBall()) newB.put(e.getEntityId(), (Ball) e);
+        }
+        return newB;
+    }
+
+    private static void findShooterAndDefender(Map<Integer, Ball> balls, Wizard shooter, Wizard defender) {
+        int countTop = 0;
+        int countBottom = 0;
+        for (Ball ball : balls.values()) {
+            if (isOnOurHalfOnTop(ball)) {
+                countTop++;
+            } else if (isOnOurHalfOnBottom(ball)) {
+                countBottom++;
             }
         }
-    }
-
-    private static void def(List<Ball> balls, Wizard wizard) {
-        TreeMap<Double, Ball> ballsDistance = new TreeMap<>();
-        for (Ball ball : balls) {
-            ballsDistance.put(Point.distance(0, 3750, ball.getX(), ball.getY()) + ball.getSpeed() * team, ball);
-        }
-        move(ballsDistance.firstEntry().getValue());
-    }
-
-    private static void attack(List<Ball> balls, Wizard wizard) {
-        TreeMap<Double, Ball> ballsDistance = new TreeMap<>();
-        for (Ball ball : balls) {
-            ballsDistance.put(Point.distance(8000, 3750, ball.getX(), ball.getY()) + ball.getSpeed() * team, ball);
-        }
-        move(ballsDistance.firstEntry().getValue());
-    }
-
-    private static void moveToClosest(List<Ball> balls, Wizard wizard) {
-        TreeMap<Double, Ball> ballsDistance = new TreeMap<>();
-        for (Ball ball : balls) {
-            ballsDistance.put(Point.distance(wizard.getX(), wizard.getY(), ball.getX(), ball.getY()) + ball.getSpeed() * team, ball);
-        }
-        move(ballsDistance.firstEntry().getValue());
-    }
-
-    private static void moveToClosest(List<Ball> balls, Wizard first, Wizard another) {
-        TreeMap<Double, Ball> firstDistance = new TreeMap<>();
-        for (Ball ball : balls) {
-            firstDistance.put(Point.distance(first.getX(), first.getY(), ball.getX(), ball.getY()) + ball.getSpeed() * team, ball);
-        }
-        TreeMap<Double, Ball> anotherDistance = new TreeMap<>();
-        for (Ball ball : balls) {
-            anotherDistance.put(Point.distance(0, 3750, ball.getX(), ball.getY()) + ball.getSpeed() * -team, ball);
-        }
-
-        move(firstDistance.firstEntry().getValue());
-
-        move(anotherDistance.firstEntry().getValue());
-
-    }
-
-    private static void move(Ball ball){
-        System.out.println("MOVE " + ball.getX() + " " + ball.getY() + " 150");
-    }
-
-    private static void throwBall(Wizard wizard) {
-        if (wizard.isGotBall()) {
-            if (team == 1)  {
-                System.out.println("THROW 16000 3750 500");
+        if (countTop > countBottom) {
+            if (shooter.getY() < defender.getY()) {
+                //ok
             } else {
-                System.out.println("THROW 0 3750 500");
+                Wizard temp = shooter;
+                shooter = defender;
+                defender = temp;
+            }
+        } else {
+            if (shooter.getY() > defender.getY()) {
+                //ok
+            } else {
+                Wizard temp = shooter;
+                shooter = defender;
+                defender = temp;
             }
         }
     }
+
+    private static boolean isOnOurHalfOnBottom(Ball ball) {
+        if (team == 1) {
+            return ball.getX() < 8000 && ball.getY() > 3750;
+        } else {
+            return ball.getX() > 8000 && ball.getY() < 3750;
+        }
+    }
+
+    private static boolean isOnOurHalfOnTop(Ball ball) {
+        if (team == 1) {
+            return ball.getX() < 8000 && ball.getY() <= 3750;
+        } else {
+            return ball.getX() > 8000 && ball.getY() <= 3750;
+        }
+    }
+
+    private static String throwWithVector(Wizard wizard, Map<Integer, Entity> entitiesMap) {
+        Point target;
+        int vx = wizard.getVx();
+        int vy = wizard.getVy();
+        if (team == 1) {
+            target = new Point((16000 + (-1 * vx)), (3750 + (-1 * vy)));
+        } else {
+            target = new Point((-1 * vx), (3750 + (-1 * vy)));
+        }
+        boolean changeAngle = false;
+        for (Entity entity : entitiesMap.values()) {
+            if (entity.isBludger() || entity.isOpponent()) {
+                if (sameAngle(wizard.getPoint(), target, entity.getPoint()))
+                    changeAngle = wizard.isCloseTo(entity.getPoint());
+            }
+        }
+        if (changeAngle) {
+            float angleTarget = (float) Math.toDegrees(Math.atan2(target.y - wizard.y, target.x - wizard.x));
+            target = new Point(
+                    (int) (wizard.getX() + Math.round(Math.cos(Math.toRadians(angleTarget - 0)) * 1000)),
+                    (int) (wizard.getY() + Math.round(Math.sin(Math.toRadians(angleTarget - 0)) * 1000))
+            );
+        }
+        return "THROW " + target.x + " " + target.y + " 500";
+    }
+
+    private static boolean sameAngle(Point source, Point target, Point opponent) {
+        float angleTarget = (float) Math.toDegrees(Math.atan2(target.y - source.y, target.x - source.x));
+        float angleOpponent = (float) Math.toDegrees(Math.atan2(opponent.y - source.y, opponent.x - source.x));
+        if (angleTarget < 0) {
+            angleTarget += 360;
+        }
+        if (angleOpponent < 0) {
+            angleOpponent += 360;
+        }
+        return (angleTarget - angleOpponent) < 30;
+    }
+
+
 }
 
-class Ball {
-    private int x;
-    private int y;
-    private int vx;
-    private int vy;
-    private boolean alreadyTarget;
+class Entity {
+    int entityId;
+    String entityType;
+    int x;
+    int y;
+    int vx;
+    int vy;
+    int state;
+
+    public Entity(int entityId, String entityType, int x, int y, int vx, int vy, int state) {
+        this.entityId = entityId;
+        this.entityType = entityType;
+        this.x = x;
+        this.y = y;
+        this.vx = vx;
+        this.vy = vy;
+        this.state = state;
+    }
+
+    public boolean isWizard() {
+        return "WIZARD".equals(entityType);
+    }
+
+    public boolean isOpponent() {
+        return "OPPONENT_WIZARD".equals(entityType);
+    }
+
+    public boolean isBall() {
+        return "SNAFFLE".equals(entityType);
+    }
+
+    public boolean isBludger() {
+        return "BLUDGER".equals(entityType);
+    }
+
+    public Entity(int entityId) {
+        this.entityId = entityId;
+    }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
 
-        Ball ball = (Ball) o;
+        Entity entity = (Entity) o;
 
-        if (x != ball.x) return false;
-        if (y != ball.y) return false;
-        if (vx != ball.vx) return false;
-        return vy == ball.vy;
+        return entityId == entity.entityId;
 
     }
 
     @Override
     public int hashCode() {
-        int result = x;
-        result = 31 * result + y;
-        result = 31 * result + vx;
-        result = 31 * result + vy;
-        return result;
+        return entityId;
     }
 
-    public Ball(int x, int y, int vx, int vy) {
-        this.x = x;
-        this.y = y;
-        this.vx = vx;
-        this.vy = vy;
-        alreadyTarget = false;
+    public int getEntityId() {
+        return entityId;
     }
 
-    public void setAlreadyTarget(boolean alreadyTarget) {
-        this.alreadyTarget = alreadyTarget;
+    public void setEntityId(int entityId) {
+        this.entityId = entityId;
     }
 
-    public boolean isAlreadyTarget() {
-        return alreadyTarget;
+    public String getEntityType() {
+        return entityType;
     }
 
-    public double getSpeed(){
-        return Point.distance(x,y, vx, vy);
-    }
-
-    public int getX() {
-        return x;
-    }
-
-    public void setX(int x) {
-        this.x = x;
-    }
-
-    public int getY() {
-        return y;
-    }
-
-    public void setY(int y) {
-        this.y = y;
-    }
-
-    public int getVx() {
-        return vx;
-    }
-
-    public void setVx(int vx) {
-        this.vx = vx;
-    }
-
-    public int getVy() {
-        return vy;
-    }
-
-    public void setVy(int vy) {
-        this.vy = vy;
-    }
-}
-
-class Wizard {
-    private int x;
-    private int y;
-    private int vx;
-    private int vy;
-    boolean gotBall;
-
-    public Wizard(int x, int y, int vx, int vy, boolean gotBall) {
-        this.x = x;
-        this.y = y;
-        this.vx = vx;
-        this.vy = vy;
-        this.gotBall = gotBall;
+    public void setEntityType(String entityType) {
+        this.entityType = entityType;
     }
 
     public int getX() {
@@ -257,11 +308,60 @@ class Wizard {
         this.vy = vy;
     }
 
-    public boolean isGotBall() {
-        return gotBall;
+    public int getState() {
+        return state;
     }
 
-    public void setGotBall(boolean gotBall) {
-        this.gotBall = gotBall;
+    public void setState(int state) {
+        this.state = state;
+    }
+
+    public Point getPoint() {
+        return new Point(x, y);
+    }
+
+    public boolean isCloseTo(Point xy) {
+        return 4000 > Point.distance(x, y, xy.getX(), xy.getY());
     }
 }
+
+class Ball extends Entity {
+    private boolean taken = false;
+
+    public Ball(int entityId, String entityType, int x, int y, int vx, int vy, int state) {
+        super(entityId, entityType, x, y, vx, vy, state);
+    }
+
+    public void setTaken(boolean taken) {
+        this.taken = taken;
+    }
+
+    public boolean taken() {
+        return taken;
+    }
+
+    public double getSpeed() {
+        return Point.distance(x, y, vx, vy);
+    }
+}
+
+class Wizard extends Entity {
+    private String move;
+
+    public void setMove(String move) {
+        this.move = move;
+    }
+
+    public String getMove() {
+        return move;
+    }
+
+    public Wizard(int entityId, String entityType, int x, int y, int vx, int vy, int state) {
+        super(entityId, entityType, x, y, vx, vy, state);
+    }
+
+    public boolean hasBall() {
+        return state == 1;
+    }
+}
+
