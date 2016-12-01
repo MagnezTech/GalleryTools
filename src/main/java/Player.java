@@ -1,27 +1,50 @@
 import java.awt.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.TreeMap;
 
 class Player {
+    static boolean symulation = false;
+
     static int team = 1;
-    static int initial = 2;
     static int lastObliviate = 0;
+    static int lastFlipendo = 0;
     static Point topBorder;
     static Point bottomBorder;
+    static Point topBorderUpper;
+    static Point bottomBorderUpper;
+    static Point topBorderUnder;
+    static Point bottomBorderUnder;
 
 
     public static void main(String args[]) {
         Scanner in = new Scanner(System.in);
-        int myTeamId = in.nextInt(); // if 0 you need to score on the right of the map, if 1 you need to score on the left
+        int myTeamId;
+        if (symulation) {
+            myTeamId = 0;
+        } else {
+            myTeamId = in.nextInt(); // if 0 you need to score on the right of the map, if 1 you need to score on the left
+        }
         team = myTeamId == 0 ? 1 : -1;
         if (team == 1) {
             topBorder = new Point(16000, 3750 - 2000);
             bottomBorder = new Point(16000, 3750 + 2000);
+            topBorderUpper = new Point(16000, 3750 - 2000 - 7500);
+            bottomBorderUpper = new Point(16000, 3750 + 2000 - 7500);
+            topBorderUnder = new Point(16000, 3750 - 2000 + 7500);
+            bottomBorderUnder = new Point(16000, 3750 + 2000 + 7500);
         } else {
-            topBorder = new Point(16000, 3750 - 2000);
-            bottomBorder = new Point(16000, 3750 + 2000);
+            topBorder = new Point(0, 3750 - 2000);
+            bottomBorder = new Point(0, 3750 + 2000);
+            topBorderUpper = new Point(0, 3750 - 2000 - 7500);
+            bottomBorderUpper = new Point(0, 3750 + 2000 - 7500);
+            topBorderUnder = new Point(0, 3750 - 2000 + 7500);
+            bottomBorderUnder = new Point(0, 3750 + 2000 + 7500);
         }
         Map<Integer, Entity> entitiesMap = new HashMap<>();
         Map<Integer, Wizard> opponents;
@@ -33,47 +56,67 @@ class Player {
 
         while (true) {
             entitiesMap.clear();
-            int entities = in.nextInt(); // number of entities still in game
-            for (int i = 0; i < entities; i++) {
-                int entityId = in.nextInt(); // entity identifier
-                String entityType = in.next(); // "WIZARD", "OPPONENT_WIZARD" or "SNAFFLE" (or "BLUDGER" after first league)
-                int x = in.nextInt(); // position
-                int y = in.nextInt(); // position
-                int vx = in.nextInt(); // velocity
-                int vy = in.nextInt(); // velocity
-                int state = in.nextInt(); // 1 if the wizard is holding a Snaffle, 0 otherwise
-                Entity entity;
-                if ("WIZARD".equals(entityType)) {
-                    entity = new Wizard(entityId, entityType, x, y, vx, vy, state);
-                } else if ("OPPONENT_WIZARD".equals(entityType)) {
-                    entity = new Wizard(entityId, entityType, x, y, vx, vy, state);
-                } else if ("SNAFFLE".equals(entityType)) {
-                    entity = new Ball(entityId, entityType, x, y, vx, vy, state);
-                } else {
-                    entity = new Ball(entityId, entityType, x, y, vx, vy, state);
+            if (symulation) {
+                try (BufferedReader br = new BufferedReader(new FileReader(new File("data")))) {
+                    String sCurrentLine;
+                    while ((sCurrentLine = br.readLine()) != null) {
+                        Entity entity;
+                        String type = sCurrentLine.split(" ")[1];
+                        if ("WIZARD".equals(type)) {
+                            entity = new Wizard(sCurrentLine);
+                        } else if ("OPPONENT_WIZARD".equals(type)) {
+                            entity = new Wizard(sCurrentLine);
+                        } else if ("SNAFFLE".equals(type)) {
+                            entity = new Ball(sCurrentLine);
+                        } else {
+                            entity = new Ball(sCurrentLine);
+                        }
+                        entitiesMap.put(entity.getEntityId(), entity);
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
-                entitiesMap.put(entityId, entity);
+            } else {
+                int entities = in.nextInt(); // number of entities still in game
+                for (int i = 0; i < entities; i++) {
+                    int entityId = in.nextInt(); // entity identifier
+                    String entityType = in.next(); // "WIZARD", "OPPONENT_WIZARD" or "SNAFFLE" (or "BLUDGER" after first league)
+                    int x = in.nextInt(); // position
+                    int y = in.nextInt(); // position
+                    int vx = in.nextInt(); // velocity
+                    int vy = in.nextInt(); // velocity
+                    int state = in.nextInt(); // 1 if the wizard is holding a Snaffle, 0 otherwise
+                    System.err.println(entityId + " " + entityType + " " + x + " " + y + " " + vx + " " + vy + " " + state + " " + lastObliviate + " " + lastFlipendo);
+                    Entity entity;
+                    if ("WIZARD".equals(entityType)) {
+                        entity = new Wizard(entityId, entityType, x, y, vx, vy, state);
+                    } else if ("OPPONENT_WIZARD".equals(entityType)) {
+                        entity = new Wizard(entityId, entityType, x, y, vx, vy, state);
+                    } else if ("SNAFFLE".equals(entityType)) {
+                        entity = new Ball(entityId, entityType, x, y, vx, vy, state);
+                    } else {
+                        entity = new Ball(entityId, entityType, x, y, vx, vy, state);
+                    }
+                    entitiesMap.put(entityId, entity);
+                }
             }
 
             balls = findBalls(entitiesMap);
             bludgers = findBludgers(entitiesMap);
             opponents = findOpponents(entitiesMap);
-            if (initial == 2) {
-                initial = 1;
-                for (Entity e : entitiesMap.values()) {
-                    if (e.isWizard()) {
-                        if (shooter == null) {
-                            shooter = (Wizard) e;
-                        } else {
-                            defender = (Wizard) e;
-                        }
+            shooter = null;
+            for (Entity e : entitiesMap.values()) {
+                if (e.isWizard()) {
+                    if (shooter == null) {
+                        shooter = (Wizard) e;
+                    } else {
+                        defender = (Wizard) e;
                     }
                 }
-                findShooterAndDefender(balls, shooter, defender);
-            } else {
-                shooter = (Wizard) entitiesMap.get(shooter.getEntityId());
-                defender = (Wizard) entitiesMap.get(defender.getEntityId());
             }
+            //findShooterAndDefender(balls, shooter, defender);
+            shooter = (Wizard) entitiesMap.get(shooter.getEntityId());
+            defender = (Wizard) entitiesMap.get(defender.getEntityId());
             prepereDefenderMove(defender, balls, opponents, bludgers);
             prepereShooterMove(shooter, balls, opponents, bludgers);
             System.out.println(shooter.getMove());
@@ -81,19 +124,42 @@ class Player {
         }
     }
 
+    private static Integer getEntityId(String sCurrentLine) {
+        return Integer.valueOf(sCurrentLine.split(" ")[0]);
+    }
+
     private static void prepereDefenderMove(Wizard wizard, Map<Integer, Ball> balls, Map<Integer, Wizard> opponents, Map<Integer, Ball> bludgers) {
         if (wizard.hasBall()) {
-            wizard.setMove(throwWithVector(wizard, opponents));
+            wizard.setMove(throwWithVector(wizard, opponents, bludgers));
         } else {
             TreeMap<Double, Ball> ballsToFlipendo = new TreeMap<>();
             for (Ball ball : balls.values()) {
                 long angleToBall = Math.round(toAngle(wizard.getPoint(), ball.getPoint()) + 180);
                 long angleToTop = Math.round(toAngle(wizard.getPoint(), topBorder) + 180);
                 long angleToBottom = Math.round(toAngle(wizard.getPoint(), bottomBorder) + 180);
-                System.err.println("ball:" + ball.getEntityId() + " " + angleToBall + " " + angleToTop + " " + angleToBottom + " " + isBetween(angleToBall, angleToTop, angleToBottom));
                 if (isBetween(angleToBall, angleToTop, angleToBottom)) {
-                    //jak blisko i nie ma nic na drodze, strzelaj
+                    if (wizard.isCloseTo(ball.getPoint(), 1500)) {
+                        for (Wizard opponent : opponents.values()) {
+                            long angleToOpponent = Math.round(toAngle(wizard.getPoint(), opponent.getPoint()) + 180);
+                            double angleDiff = Math.abs(angleToOpponent - angleToBall);
+                            if (wizard.further(opponent.getPoint(), team) || (!wizard.isCloseTo(opponent.getPoint(), 5000) || angleDiff < 20)) {
+                                ballsToFlipendo.put(Point.distance(ball.getX(), ball.getY(), wizard.getX(), wizard.getY()), ball);
+                            }
+                        }
+                        for (Ball bludger : bludgers.values()) {
+                            long angleToBludger = Math.round(toAngle(wizard.getPoint(), bludger.getPoint()) + 180);
+                            double angleDiff = Math.abs(angleToBludger - angleToBall);
+                            if (wizard.further(bludger.getPoint(), team) || (!wizard.isCloseTo(bludger.getPoint(), 5000) || angleDiff < 10)) {
+                                ballsToFlipendo.put(Point.distance(ball.getX(), ball.getY(), wizard.getX(), wizard.getY()), ball);
+                            }
+                        }
+                    }
                 }
+            }
+            if (!ballsToFlipendo.isEmpty() && lastFlipendo > 15) {
+                lastFlipendo = 0;
+                wizard.setMove("FLIPENDO " + ballsToFlipendo.pollFirstEntry().getValue().getEntityId());
+                return;
             }
             TreeMap<Double, Ball> distancesToBludgers = new TreeMap<>();
             for (Ball bludger : bludgers.values()) {
@@ -101,12 +167,13 @@ class Player {
                 distancesToBludgers.put(Point.distance(bludger.getX(), bludger.getY(), wizard.getX(), wizard.getY()), bludger);
             }
             Ball closestBludger = distancesToBludgers.pollFirstEntry().getValue();
-            if (wizard.isCloseTo(closestBludger.getPoint()) && lastObliviate > 20) {
+            if (wizard.isCloseTo(closestBludger.getPoint(), 2500) && lastObliviate > 15) {
                 wizard.setMove("OBLIVIATE " + closestBludger.getEntityId());
                 lastObliviate = 0;
                 return;
             }
             lastObliviate++;
+            lastFlipendo++;
             TreeMap<Double, Wizard> distancesToOpponents = new TreeMap<>();
             for (Wizard opponent : opponents.values()) {
                 if (opponent == null) continue;
@@ -138,7 +205,7 @@ class Player {
     }
 
     private static boolean isBetween(long angleToBall, long angleToTop, long angleToBottom) {
-        if(team == 1){
+        if (team == 1) {
             return (angleToBall > angleToTop) && (angleToBall < angleToBottom);
         } else {
             return (angleToBall > angleToTop) && (angleToBall > angleToBottom);
@@ -147,20 +214,50 @@ class Player {
 
     private static void prepereShooterMove(Wizard wizard, Map<Integer, Ball> balls, Map<Integer, Wizard> opponents, Map<Integer, Ball> bludgers) {
         if (wizard.hasBall()) {
-            wizard.setMove(throwWithVector(wizard, opponents));
+            wizard.setMove(throwWithVector(wizard, opponents, bludgers));
         } else {
+            TreeMap<Double, Ball> ballsToFlipendo = new TreeMap<>();
+            for (Ball ball : balls.values()) {
+                long angleToBall = Math.round(toAngle(wizard.getPoint(), ball.getPoint()) + 180);
+                long angleToTop = Math.round(toAngle(wizard.getPoint(), topBorder) + 180);
+                long angleToBottom = Math.round(toAngle(wizard.getPoint(), bottomBorder) + 180);
+                if (isBetween(angleToBall, angleToTop, angleToBottom)) {
+                    if (wizard.isCloseTo(ball.getPoint(), 1500)) {
+                        for (Wizard opponent : opponents.values()) {
+                            long angleToOpponent = Math.round(toAngle(wizard.getPoint(), opponent.getPoint()) + 180);
+                            double angleDiff = Math.abs(angleToOpponent - angleToBall);
+                            if (wizard.further(opponent.getPoint(), team) || (!wizard.isCloseTo(opponent.getPoint(), 5000) || angleDiff < 20)) {
+                                ballsToFlipendo.put(Point.distance(ball.getX(), ball.getY(), wizard.getX(), wizard.getY()), ball);
+                            }
+                        }
+                        for (Ball bludger : bludgers.values()) {
+                            long angleToBludger = Math.round(toAngle(wizard.getPoint(), bludger.getPoint()) + 180);
+                            double angleDiff = Math.abs(angleToBludger - angleToBall);
+                            if (wizard.further(bludger.getPoint(), team) || (!wizard.isCloseTo(bludger.getPoint(), 5000) || angleDiff < 10)) {
+                                ballsToFlipendo.put(Point.distance(ball.getX(), ball.getY(), wizard.getX(), wizard.getY()), ball);
+                            }
+                        }
+                    }
+                }
+            }
+            if (!ballsToFlipendo.isEmpty() && lastFlipendo > 15) {
+                lastFlipendo = 0;
+                wizard.setMove("FLIPENDO " + ballsToFlipendo.pollFirstEntry().getValue().getEntityId());
+                return;
+            }
             TreeMap<Double, Ball> distancesToBludgers = new TreeMap<>();
             for (Ball bludger : bludgers.values()) {
                 if (bludger == null) continue;
                 distancesToBludgers.put(Point.distance(bludger.getX(), bludger.getY(), wizard.getX(), wizard.getY()), bludger);
             }
             Ball closestBludger = distancesToBludgers.pollFirstEntry().getValue();
-            if (wizard.isCloseTo(closestBludger.getPoint()) && lastObliviate > 20) {
+            if (wizard.isCloseTo(closestBludger.getPoint(), 2500) && lastObliviate > 15) {
                 wizard.setMove("OBLIVIATE " + closestBludger.getEntityId());
                 lastObliviate = 0;
                 return;
             }
             lastObliviate++;
+            lastFlipendo++;
             TreeMap<Double, Ball> distances = new TreeMap<>();
             for (Ball ball : balls.values()) {
                 if (ball == null) continue;
@@ -244,7 +341,7 @@ class Player {
         }
     }
 
-    private static String throwWithVector(Wizard wizard, Map<Integer, Wizard> opponents) {
+    private static String throwWithVector(Wizard wizard, Map<Integer, Wizard> opponents, Map<Integer, Ball> bludgers) {
         Point target;
         int vx = wizard.getVx();
         int vy = wizard.getVy();
@@ -255,8 +352,8 @@ class Player {
         }
         double angle = toAngle(wizard.getPoint(), target);
         for (Wizard opponent : opponents.values()) {
-            if (wizard.isCloseTo(opponent.getPoint()) && opponent.further(wizard, team)) {
-                if (wizard.under(opponent)) {
+            if (wizard.isCloseTo(opponent.getPoint(), 1200) && opponent.further(wizard.getPoint(), team)) {
+                if (wizard.under(opponent.getPoint())) {
                     angle += 30;
                 } else {
                     angle -= 30;
@@ -264,9 +361,18 @@ class Player {
                 break;
             }
         }
+        for (Ball bludger : bludgers.values()) {
+            if (wizard.isCloseTo(bludger.getPoint(), 3000) && bludger.further(wizard.getPoint(), team)) {
+                if (wizard.under(bludger.getPoint())) {
+                    angle += 15;
+                } else {
+                    angle -= 15;
+                }
+                break;
+            }
+        }
         Point p = toVector(wizard.getPoint(), angle);
         return "THROW " + p.x + " " + p.y + " 500";
-//        return "THROW " + target.x + " " + target.y + " 500";
     }
 
     private static String createMove(int x, int y) {
@@ -287,8 +393,8 @@ class Player {
 
     public static Point toVector(Point source, double angle) {
         return new Point(
-                (int) (source.getX() + Math.round(Math.cos(Math.toRadians(angle)) * 10000)),
-                (int) (source.getY() + Math.round(Math.sin(Math.toRadians(angle)) * 10000))
+                (int) (source.getX() + Math.round(Math.cos(Math.toRadians(angle)) * 2000)),
+                (int) (source.getY() + Math.round(Math.sin(Math.toRadians(angle)) * 2000))
         );
     }
 
@@ -314,6 +420,18 @@ class Entity {
         this.vx = vx;
         this.vy = vy;
         this.state = state;
+    }
+
+    public Entity(String line) {
+        String[] split = line.split(" ");
+        this.entityId = Integer.valueOf(split[0]);
+        this.entityType = split[1];
+        this.x = Integer.valueOf(split[2]);
+        this.y = Integer.valueOf(split[3]);
+        ;
+        this.vx = Integer.valueOf(split[4]);
+        this.vy = Integer.valueOf(split[5]);
+        this.state = Integer.valueOf(split[6]);
     }
 
     @Override
@@ -389,21 +507,21 @@ class Entity {
         return new Point(vx, vy);
     }
 
-    public boolean isCloseTo(Point xy) {
-        return Point.distance(x, y, xy.getX(), xy.getY()) < 3000;
+    public boolean isCloseTo(Point xy, int distance) {
+        return Point.distance(x, y, xy.getX(), xy.getY()) < distance;
     }
 
-    public boolean under(Wizard opponent) {
-        if (y > opponent.y) return true;
+    public boolean under(Point xy) {
+        if (y > xy.y) return true;
         return false;
     }
 
-    public boolean further(Wizard opponent, int team) {
+    public boolean further(Point xy, int team) {
         if (team == 1) {
-            if (x > opponent.x) return true;
+            if (x > xy.x) return true;
             return false;
         } else {
-            if (x < opponent.x) return true;
+            if (x < xy.x) return true;
             return false;
         }
     }
@@ -415,6 +533,10 @@ class Ball extends Entity {
 
     public Ball(int entityId, String entityType, int x, int y, int vx, int vy, int state) {
         super(entityId, entityType, x, y, vx, vy, state);
+    }
+
+    public Ball(String line) {
+        super(line);
     }
 
     public void setTaken(boolean taken) {
@@ -447,6 +569,10 @@ class Wizard extends Entity {
         super(entityId, entityType, x, y, vx, vy, state);
     }
 
+    public Wizard(String line) {
+        super(line);
+    }
+
     public String getMove() {
         return move;
     }
@@ -459,4 +585,3 @@ class Wizard extends Entity {
         return state == 1;
     }
 }
-
