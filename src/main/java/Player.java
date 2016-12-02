@@ -9,7 +9,7 @@ import java.util.Scanner;
 import java.util.TreeMap;
 
 class Player {
-    static boolean symulation = true;
+    static boolean symulation = false;
 
     static int team = 1;
     static int lastObliviate = 0;
@@ -117,8 +117,8 @@ class Player {
             //findShooterAndDefender(balls, shooter, defender);
             shooter = (Wizard) entitiesMap.get(shooter.getEntityId());
             defender = (Wizard) entitiesMap.get(defender.getEntityId());
-            prepereDefenderMove(defender, balls, opponents, bludgers);
-            prepereShooterMove(shooter, balls, opponents, bludgers);
+            prepereMove(shooter, balls, opponents, bludgers, false);
+            prepereMove(defender, balls, opponents, bludgers, true);
             System.out.println(shooter.getMove());
             System.out.println(defender.getMove());
         }
@@ -128,7 +128,7 @@ class Player {
         return Integer.valueOf(sCurrentLine.split(" ")[0]);
     }
 
-    private static void prepereDefenderMove(Wizard wizard, Map<Integer, Ball> balls, Map<Integer, Wizard> opponents, Map<Integer, Ball> bludgers) {
+    private static void prepereMove(Wizard wizard, Map<Integer, Ball> balls, Map<Integer, Wizard> opponents, Map<Integer, Ball> bludgers, boolean isDefender) {
         if (wizard.hasBall()) {
             wizard.setMove(throwWithVector(wizard, opponents, bludgers));
         } else {
@@ -138,8 +138,12 @@ class Player {
                 long angleToBall = Math.round(toAngle(wizard.getPoint(), ball.getPoint()) + 180);
                 long angleToTop = Math.round(toAngle(wizard.getPoint(), topBorder) + 180);
                 long angleToBottom = Math.round(toAngle(wizard.getPoint(), bottomBorder) + 180);
-                if (isBetween(angleToBall, angleToTop, angleToBottom)) {
-                    if (wizard.isCloseTo(ball.getPoint(), 1500)) {
+                long angleToTopUpper = Math.round(toAngle(wizard.getPoint(), topBorderUpper) + 180);
+                long angleToBottomUpper = Math.round(toAngle(wizard.getPoint(), bottomBorderUpper) + 180);
+                long angleToTopUnder = Math.round(toAngle(wizard.getPoint(), topBorderUnder) + 180);
+                long angleToBottomUnder = Math.round(toAngle(wizard.getPoint(), bottomBorderUnder) + 180);
+                if (isBetween(angleToBall, angleToTop, angleToBottom) || isBetween(angleToBall, angleToTopUpper, angleToBottomUpper) || isBetween(angleToBall, angleToTopUnder, angleToBottomUnder)) {
+                    if (wizard.isCloseTo(ball.getPoint(), 5000)) {
                         goodShot = true;
                         for (Wizard opponent : opponents.values()) {
                             long angleToOpponent = Math.round(toAngle(wizard.getPoint(), opponent.getPoint()) + 180);
@@ -166,17 +170,17 @@ class Player {
                 wizard.setMove("FLIPENDO " + ballsToFlipendo.pollFirstEntry().getValue().getEntityId());
                 return;
             }
-            TreeMap<Double, Ball> distancesToBludgers = new TreeMap<>();
-            for (Ball bludger : bludgers.values()) {
-                if (bludger == null) continue;
-                distancesToBludgers.put(Point.distance(bludger.getX(), bludger.getY(), wizard.getX(), wizard.getY()), bludger);
-            }
-            Ball closestBludger = distancesToBludgers.pollFirstEntry().getValue();
-            if (wizard.isCloseTo(closestBludger.getPoint(), 2500) && lastObliviate > 30) {
-                wizard.setMove("OBLIVIATE " + closestBludger.getEntityId());
-                lastObliviate = 0;
-                return;
-            }
+            // TreeMap<Double, Ball> distancesToBludgers = new TreeMap<>();
+            // for (Ball bludger : bludgers.values()) {
+            //     if (bludger == null) continue;
+            //     distancesToBludgers.put(Point.distance(bludger.getX(), bludger.getY(), wizard.getX(), wizard.getY()), bludger);
+            // }
+            // Ball closestBludger = distancesToBludgers.pollFirstEntry().getValue();
+            // if (wizard.isCloseTo(closestBludger.getPoint(), 2500) && lastObliviate > 30) {
+            //     wizard.setMove("OBLIVIATE " + closestBludger.getEntityId());
+            //     lastObliviate = 0;
+            //     return;
+            // }
             lastObliviate++;
             lastFlipendo++;
             TreeMap<Double, Wizard> distancesToOpponents = new TreeMap<>();
@@ -191,11 +195,13 @@ class Player {
                 distancesFromOpponentToBall.put(Point.distance(ball.getX(), ball.getY(), closestOpponent.getX(), closestOpponent.getY()), ball);
             }
             Ball closestBallToOpponent = distancesFromOpponentToBall.pollFirstEntry().getValue();
-            Point opponentVector = toVector(closestOpponent.getPoint(), toAngle(closestOpponent.getPoint(), closestBallToOpponent.getPoint()));
 
             TreeMap<Double, Ball> distances = new TreeMap<>();
-            distances.put(2000.0, new Ball(100, "NIC", team == 1 ? 300 : 15700, 3750, 0, 0, 0));
-            distances.put(Point.distance(opponentVector.getX(), opponentVector.getY(), wizard.getX(), wizard.getY()), new Ball(100, "NIC", team == 1 ? 300 : 15700, 3750, 0, 0, 0));
+            if (isDefender) {
+                int position = (int) Math.round((3750 - 2000) + 4000*closestBallToOpponent.getY()*1.0/7500.0);
+                distances.put(3000.0, new Ball(100, "NIC", team == 1 ? 500 : 15700, 3750, 0, 0, 0));
+                distances.put(Point.distance(closestBallToOpponent.getX(), closestBallToOpponent.getY(), wizard.getX(), wizard.getY()), new Ball(100, "NIC", team == 1 ? 500 : 15500, position, 0, 0, 0));
+            }
             for (Ball ball : balls.values()) {
                 if (ball == null || ball.taken()) continue;
                 distances.put(Point.distance(ball.getX(), ball.getY(), wizard.getX(), wizard.getY()), ball);
@@ -203,7 +209,7 @@ class Player {
             Ball closest;
             do {
                 closest = distances.pollFirstEntry().getValue();
-            } while (closest.taken() || distances.isEmpty());
+            } while (!distances.isEmpty() && closest.taken());
             closest.setTaken(true);
             wizard.setMove(createMove(wizard.getPoint(), closest.getPoint()));
         }
@@ -219,71 +225,6 @@ class Player {
             return (angleToBall > angleToTop) && (angleToBall < angleToBottom);
         } else {
             return (angleToBall > angleToTop) && (angleToBall > angleToBottom);
-        }
-    }
-
-    private static void prepereShooterMove(Wizard wizard, Map<Integer, Ball> balls, Map<Integer, Wizard> opponents, Map<Integer, Ball> bludgers) {
-        if (wizard.hasBall()) {
-            wizard.setMove(throwWithVector(wizard, opponents, bludgers));
-        } else {
-            TreeMap<Double, Ball> ballsToFlipendo = new TreeMap<>();
-            for (Ball ball : balls.values()) {
-                boolean goodShot = false;
-                long angleToBall = Math.round(toAngle(wizard.getPoint(), ball.getPoint()) + 180);
-                long angleToTop = Math.round(toAngle(wizard.getPoint(), topBorder) + 180);
-                long angleToBottom = Math.round(toAngle(wizard.getPoint(), bottomBorder) + 180);
-                if (isBetween(angleToBall, angleToTop, angleToBottom)) {
-                    if (wizard.isCloseTo(ball.getPoint(), 1500)) {
-                        goodShot = true;
-                        for (Wizard opponent : opponents.values()) {
-                            long angleToOpponent = Math.round(toAngle(wizard.getPoint(), opponent.getPoint()) + 180);
-                            double angleDiff = Math.abs(angleToOpponent - angleToBall);
-                            if (opponent.further(wizard.getPoint(), team) && isOnWay(wizard.getPoint(), opponent.getPoint(), angleDiff)) {
-                                goodShot = false;
-                            }
-                        }
-                        for (Ball bludger : bludgers.values()) {
-                            long angleToBludger = Math.round(toAngle(wizard.getPoint(), bludger.getPoint()) + 180);
-                            double angleDiff = Math.abs(angleToBludger - angleToBall);
-                            if (bludger.further(wizard.getPoint(), team) && isOnWay(wizard.getPoint(), bludger.getPoint(), angleDiff)) {
-                                goodShot = false;
-                            }
-                        }
-                    }
-                }
-                if (goodShot) {
-                    ballsToFlipendo.put(Point.distance(ball.getX(), ball.getY(), wizard.getX(), wizard.getY()), ball);
-                }
-            }
-            if (!ballsToFlipendo.isEmpty() && lastFlipendo > 15) {
-                lastFlipendo = 0;
-                wizard.setMove("FLIPENDO " + ballsToFlipendo.pollFirstEntry().getValue().getEntityId());
-                return;
-            }
-            TreeMap<Double, Ball> distancesToBludgers = new TreeMap<>();
-            for (Ball bludger : bludgers.values()) {
-                if (bludger == null) continue;
-                distancesToBludgers.put(Point.distance(bludger.getX(), bludger.getY(), wizard.getX(), wizard.getY()), bludger);
-            }
-            Ball closestBludger = distancesToBludgers.pollFirstEntry().getValue();
-            if (wizard.isCloseTo(closestBludger.getPoint(), 2500) && lastObliviate > 30) {
-                wizard.setMove("OBLIVIATE " + closestBludger.getEntityId());
-                lastObliviate = 0;
-                return;
-            }
-            lastObliviate++;
-            lastFlipendo++;
-            TreeMap<Double, Ball> distances = new TreeMap<>();
-            for (Ball ball : balls.values()) {
-                if (ball == null) continue;
-                distances.put(Point.distance(ball.getX(), ball.getY(), wizard.getX(), wizard.getY()), ball);
-            }
-            Ball closest;
-            do {
-                closest = distances.pollFirstEntry().getValue();
-            } while (closest.taken() && !distances.isEmpty());
-            closest.setTaken(true);
-            wizard.setMove(createMove(wizard.getPoint(), closest.getPoint()));
         }
     }
 
