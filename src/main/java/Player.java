@@ -14,6 +14,7 @@ class Player {
     static int team = 1;
     static int lastObliviate = 0;
     static int lastFlipendo = 0;
+    static int lastPetrificus = 0;
     static Point topBorder;
     static Point bottomBorder;
     static Point topBorderUpper;
@@ -21,30 +22,29 @@ class Player {
     static Point topBorderUnder;
     static Point bottomBorderUnder;
 
-
     public static void main(String args[]) {
         Scanner in = new Scanner(System.in);
         int myTeamId;
         if (symulation) {
-            myTeamId = 0;
+            myTeamId = 1;
         } else {
             myTeamId = in.nextInt(); // if 0 you need to score on the right of the map, if 1 you need to score on the left
         }
         team = myTeamId == 0 ? 1 : -1;
         if (team == 1) {
-            topBorder = new Point(16000, 3750 - 2000);
-            bottomBorder = new Point(16000, 3750 + 2000);
-            topBorderUpper = new Point(16000, 3750 - 2000 - 7500);
-            bottomBorderUpper = new Point(16000, 3750 + 2000 - 7500);
-            topBorderUnder = new Point(16000, 3750 - 2000 + 7500);
-            bottomBorderUnder = new Point(16000, 3750 + 2000 + 7500);
+            topBorder = new Point(16000, 3750 - 1500);
+            bottomBorder = new Point(16000, 3750 + 1500);
+            topBorderUpper = new Point(16000, 3750 - 1500 - 7500 - 1000);
+            bottomBorderUpper = new Point(16000, 3750 + 1500 - 7500 - 1000);
+            topBorderUnder = new Point(16000, 3750 - 1500 + 7500 + 1000);
+            bottomBorderUnder = new Point(16000, 3750 + 1500 + 7500 + 1000);
         } else {
-            topBorder = new Point(0, 3750 - 2000);
-            bottomBorder = new Point(0, 3750 + 2000);
-            topBorderUpper = new Point(0, 3750 - 2000 - 7500);
-            bottomBorderUpper = new Point(0, 3750 + 2000 - 7500);
-            topBorderUnder = new Point(0, 3750 - 2000 + 7500);
-            bottomBorderUnder = new Point(0, 3750 + 2000 + 7500);
+            topBorder = new Point(0, 3750 - 1500);
+            bottomBorder = new Point(0, 3750 + 1500);
+            topBorderUpper = new Point(0, 3750 - 1500 - 7500);
+            bottomBorderUpper = new Point(0, 3750 + 1500 - 7500);
+            topBorderUnder = new Point(0, 3750 - 1500 + 7500);
+            bottomBorderUnder = new Point(0, 3750 + 1500 + 7500);
         }
         Map<Integer, Entity> entitiesMap = new HashMap<>();
         Map<Integer, Wizard> opponents;
@@ -86,7 +86,7 @@ class Player {
                     int vx = in.nextInt(); // velocity
                     int vy = in.nextInt(); // velocity
                     int state = in.nextInt(); // 1 if the wizard is holding a Snaffle, 0 otherwise
-                    System.err.println(entityId + " " + entityType + " " + x + " " + y + " " + vx + " " + vy + " " + state + " " + lastObliviate + " " + lastFlipendo);
+                    System.err.println(entityId + " " + entityType + " " + x + " " + y + " " + vx + " " + vy + " " + state + " " + lastPetrificus + " " + lastFlipendo);
                     Entity entity;
                     if ("WIZARD".equals(entityType)) {
                         entity = new Wizard(entityId, entityType, x, y, vx, vy, state);
@@ -124,10 +124,6 @@ class Player {
         }
     }
 
-    private static Integer getEntityId(String sCurrentLine) {
-        return Integer.valueOf(sCurrentLine.split(" ")[0]);
-    }
-
     private static void prepereMove(Wizard wizard, Map<Integer, Ball> balls, Map<Integer, Wizard> opponents, Map<Integer, Ball> bludgers, boolean isDefender) {
         if (wizard.hasBall()) {
             wizard.setMove(throwWithVector(wizard, opponents, bludgers));
@@ -142,7 +138,9 @@ class Player {
                 long angleToBottomUpper = Math.round(toAngle(wizard.getPoint(), bottomBorderUpper) + 180);
                 long angleToTopUnder = Math.round(toAngle(wizard.getPoint(), topBorderUnder) + 180);
                 long angleToBottomUnder = Math.round(toAngle(wizard.getPoint(), bottomBorderUnder) + 180);
-                if (isBetween(angleToBall, angleToTop, angleToBottom) || isBetween(angleToBall, angleToTopUpper, angleToBottomUpper) || isBetween(angleToBall, angleToTopUnder, angleToBottomUnder)) {
+                if ( isBetween(angleToBall, angleToTop, angleToBottom) ||
+                    (isBetween(angleToBall, angleToTopUpper, angleToBottomUpper) && ball.getX() > 2000) ||
+                    (isBetween(angleToBall, angleToTopUnder, angleToBottomUnder) && ball.getX() < 5500)) {
                     if (wizard.isCloseTo(ball.getPoint(), 5000)) {
                         goodShot = true;
                         for (Wizard opponent : opponents.values()) {
@@ -170,19 +168,28 @@ class Player {
                 wizard.setMove("FLIPENDO " + ballsToFlipendo.pollFirstEntry().getValue().getEntityId());
                 return;
             }
-            // TreeMap<Double, Ball> distancesToBludgers = new TreeMap<>();
-            // for (Ball bludger : bludgers.values()) {
-            //     if (bludger == null) continue;
-            //     distancesToBludgers.put(Point.distance(bludger.getX(), bludger.getY(), wizard.getX(), wizard.getY()), bludger);
-            // }
-            // Ball closestBludger = distancesToBludgers.pollFirstEntry().getValue();
-            // if (wizard.isCloseTo(closestBludger.getPoint(), 2500) && lastObliviate > 30) {
-            //     wizard.setMove("OBLIVIATE " + closestBludger.getEntityId());
-            //     lastObliviate = 0;
-            //     return;
-            // }
+            if (!isDefender) {
+                TreeMap<Double, Ball> ballsGoingFastToMyBase = new TreeMap<>();
+                for (Ball ball : balls.values()) {
+                    if (team == 1){
+                        if (ball.getVx() < -800) {
+                            ballsGoingFastToMyBase.put(Point.distance(ball.getX(), ball.getY(), 0, 3750), ball);
+                        }
+                    } else {
+                        if (ball.getVx() > 800) {
+                            ballsGoingFastToMyBase.put(Point.distance(ball.getX(), ball.getY(), 16000, 3750), ball);
+                        }
+                    }
+                }
+                if (!ballsGoingFastToMyBase.isEmpty() && lastPetrificus > 10) {
+                    lastPetrificus = 0;
+                    wizard.setMove("PETRIFICUS " + ballsGoingFastToMyBase.pollFirstEntry().getValue().getEntityId());
+                    return;
+                }
+            }
             lastObliviate++;
             lastFlipendo++;
+            lastPetrificus++;
             TreeMap<Double, Wizard> distancesToOpponents = new TreeMap<>();
             for (Wizard opponent : opponents.values()) {
                 if (opponent == null) continue;
@@ -198,8 +205,8 @@ class Player {
 
             TreeMap<Double, Ball> distances = new TreeMap<>();
             if (isDefender) {
-                int position = (int) Math.round((3750 - 2000) + 4000*closestBallToOpponent.getY()*1.0/7500.0);
-                distances.put(3000.0, new Ball(100, "NIC", team == 1 ? 500 : 15700, 3750, 0, 0, 0));
+                int position = (int) Math.round((3750 - 2000) + 4000 * closestBallToOpponent.getY() * 1.0 / 7500.0);
+                distances.put(3000.0, new Ball(100, "NIC", team == 1 ? 500 : 15500, 3750, 0, 0, 0));
                 distances.put(Point.distance(closestBallToOpponent.getX(), closestBallToOpponent.getY(), wizard.getX(), wizard.getY()), new Ball(100, "NIC", team == 1 ? 500 : 15500, position, 0, 0, 0));
             }
             for (Ball ball : balls.values()) {
@@ -215,7 +222,7 @@ class Player {
         }
     }
 
-    private static boolean isOnWay(Point wizard, Point opponent, double angle){
+    private static boolean isOnWay(Point wizard, Point opponent, double angle) {
         int distance = (int) Math.round(Point.distance(opponent.getX(), opponent.getY(), wizard.getX(), wizard.getY()));
         return Math.sqrt(2 * distance * distance * (1 - Math.cos(Math.toRadians(angle)))) < 500;
     }
@@ -224,7 +231,7 @@ class Player {
         if (team == 1) {
             return (angleToBall > angleToTop) && (angleToBall < angleToBottom);
         } else {
-            return (angleToBall > angleToTop) && (angleToBall > angleToBottom);
+            return (angleToBall < angleToTop) && (angleToBall > angleToBottom);
         }
     }
 
@@ -252,51 +259,6 @@ class Player {
         return map;
     }
 
-    private static void findShooterAndDefender(Map<Integer, Ball> balls, Wizard shooter, Wizard defender) {
-        int countTop = 0;
-        int countBottom = 0;
-        for (Ball ball : balls.values()) {
-            if (isOnOurHalfOnTop(ball)) {
-                countTop++;
-            } else if (isOnOurHalfOnBottom(ball)) {
-                countBottom++;
-            }
-        }
-        if (countTop > countBottom) {
-            if (shooter.getY() < defender.getY()) {
-                //ok
-            } else {
-                Wizard temp = shooter;
-                shooter = defender;
-                defender = temp;
-            }
-        } else {
-            if (shooter.getY() > defender.getY()) {
-                //ok
-            } else {
-                Wizard temp = shooter;
-                shooter = defender;
-                defender = temp;
-            }
-        }
-    }
-
-    private static boolean isOnOurHalfOnBottom(Ball ball) {
-        if (team == 1) {
-            return ball.getX() < 8000 && ball.getY() > 3750;
-        } else {
-            return ball.getX() > 8000 && ball.getY() < 3750;
-        }
-    }
-
-    private static boolean isOnOurHalfOnTop(Ball ball) {
-        if (team == 1) {
-            return ball.getX() < 8000 && ball.getY() <= 3750;
-        } else {
-            return ball.getX() > 8000 && ball.getY() <= 3750;
-        }
-    }
-
     private static String throwWithVector(Wizard wizard, Map<Integer, Wizard> opponents, Map<Integer, Ball> bludgers) {
         Point target;
         int vx = wizard.getVx();
@@ -308,11 +270,11 @@ class Player {
         }
         double angle = toAngle(wizard.getPoint(), target);
         for (Wizard opponent : opponents.values()) {
-            if (wizard.isCloseTo(opponent.getPoint(), 1200) && opponent.further(wizard.getPoint(), team)) {
+            if (wizard.isCloseTo(opponent.getPoint(), 2000) && opponent.further(wizard.getPoint(), team)) {
                 if (wizard.under(opponent.getPoint())) {
-                    angle += 30;
+                    angle += 30 * team;
                 } else {
-                    angle -= 30;
+                    angle -= 30 * team;
                 }
                 break;
             }
@@ -356,6 +318,10 @@ class Player {
 
     public static double toAngle(Point source, Point target) {
         return Math.toDegrees(Math.atan2(target.y - source.y, target.x - source.x));
+    }
+
+    private static Integer getEntityId(String sCurrentLine) {
+        return Integer.valueOf(sCurrentLine.split(" ")[0]);
     }
 }
 
