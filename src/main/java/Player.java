@@ -14,13 +14,13 @@ class Player {
     static int team = 1;
     static int lastObliviate = 0;
     static int lastFlipendo = 0;
-    static int lastPetrificus = 0;
     static Point topBorder;
     static Point bottomBorder;
     static Point topBorderUpper;
     static Point bottomBorderUpper;
     static Point topBorderUnder;
     static Point bottomBorderUnder;
+
 
     public static void main(String args[]) {
         Scanner in = new Scanner(System.in);
@@ -86,7 +86,7 @@ class Player {
                     int vx = in.nextInt(); // velocity
                     int vy = in.nextInt(); // velocity
                     int state = in.nextInt(); // 1 if the wizard is holding a Snaffle, 0 otherwise
-                    System.err.println(entityId + " " + entityType + " " + x + " " + y + " " + vx + " " + vy + " " + state + " " + lastPetrificus + " " + lastFlipendo);
+                    System.err.println(entityId + " " + entityType + " " + x + " " + y + " " + vx + " " + vy + " " + state + " " + lastObliviate + " " + lastFlipendo);
                     Entity entity;
                     if ("WIZARD".equals(entityType)) {
                         entity = new Wizard(entityId, entityType, x, y, vx, vy, state);
@@ -139,8 +139,8 @@ class Player {
                 long angleToTopUnder = Math.round(toAngle(wizard.getPoint(), topBorderUnder) + 180);
                 long angleToBottomUnder = Math.round(toAngle(wizard.getPoint(), bottomBorderUnder) + 180);
                 if ( isBetween(angleToBall, angleToTop, angleToBottom) ||
-                    (isBetween(angleToBall, angleToTopUpper, angleToBottomUpper) && ball.getX() > 2000) ||
-                    (isBetween(angleToBall, angleToTopUnder, angleToBottomUnder) && ball.getX() < 5500)) {
+                        (isBetween(angleToBall, angleToTopUpper, angleToBottomUpper) && ball.getX() > 2000) ||
+                        (isBetween(angleToBall, angleToTopUnder, angleToBottomUnder) && ball.getX() < 5500)) {
                     if (wizard.isCloseTo(ball.getPoint(), 5000)) {
                         goodShot = true;
                         for (Wizard opponent : opponents.values()) {
@@ -168,28 +168,19 @@ class Player {
                 wizard.setMove("FLIPENDO " + ballsToFlipendo.pollFirstEntry().getValue().getEntityId());
                 return;
             }
-            if (!isDefender) {
-                TreeMap<Double, Ball> ballsGoingFastToMyBase = new TreeMap<>();
-                for (Ball ball : balls.values()) {
-                    if (team == 1){
-                        if (ball.getVx() < -800) {
-                            ballsGoingFastToMyBase.put(Point.distance(ball.getX(), ball.getY(), 0, 3750), ball);
-                        }
-                    } else {
-                        if (ball.getVx() > 800) {
-                            ballsGoingFastToMyBase.put(Point.distance(ball.getX(), ball.getY(), 16000, 3750), ball);
-                        }
-                    }
-                }
-                if (!ballsGoingFastToMyBase.isEmpty() && lastPetrificus > 10) {
-                    lastPetrificus = 0;
-                    wizard.setMove("PETRIFICUS " + ballsGoingFastToMyBase.pollFirstEntry().getValue().getEntityId());
-                    return;
-                }
-            }
+            // TreeMap<Double, Ball> distancesToBludgers = new TreeMap<>();
+            // for (Ball bludger : bludgers.values()) {
+            //     if (bludger == null) continue;
+            //     distancesToBludgers.put(Point.distance(bludger.getX(), bludger.getY(), wizard.getX(), wizard.getY()), bludger);
+            // }
+            // Ball closestBludger = distancesToBludgers.pollFirstEntry().getValue();
+            // if (wizard.isCloseTo(closestBludger.getPoint(), 2500) && lastObliviate > 30) {
+            //     wizard.setMove("OBLIVIATE " + closestBludger.getEntityId());
+            //     lastObliviate = 0;
+            //     return;
+            // }
             lastObliviate++;
             lastFlipendo++;
-            lastPetrificus++;
             TreeMap<Double, Wizard> distancesToOpponents = new TreeMap<>();
             for (Wizard opponent : opponents.values()) {
                 if (opponent == null) continue;
