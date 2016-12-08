@@ -19,5 +19,18 @@
     <orderEntry type="library" name="Maven: asm:asm:3.0" level="project" />
     <orderEntry type="library" name="Maven: com.jgoodies:forms:1.1-preview" level="project" />
     <orderEntry type="library" name="Maven: jdom:jdom:1.0" level="project" />
+    <orderEntry type="module-library">
+      <library>
+        <CLASSES>
+          <root url="file://C:/openCV/opencv/build/java" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES>
+          <root url="file://C:/openCV/opencv/build/java" />
+        </SOURCES>
+        <jarDirectory url="file://C:/openCV/opencv/build/java" recursive="false" />
+        <jarDirectory url="file://C:/openCV/opencv/build/java" recursive="false" type="SOURCES" />
+      </library>
+    </orderEntry>
   </component>
 </module>

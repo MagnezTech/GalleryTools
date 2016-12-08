@@ -14,6 +14,7 @@ class Player {
     static int team = 1;
     static int lastObliviate = 0;
     static int lastFlipendo = 0;
+    static int lastPetrificus = 0;
     static Point topBorder;
     static Point bottomBorder;
     static Point topBorderUpper;
@@ -73,6 +74,10 @@ class Player {
                         }
                         entitiesMap.put(entity.getEntityId(), entity);
                     }
+                    lastObliviate = Integer.valueOf(sCurrentLine.split(" ")[7]);
+                    lastFlipendo = Integer.valueOf(sCurrentLine.split(" ")[8]);
+                    lastPetrificus = Integer.valueOf(sCurrentLine.split(" ")[9]);
+
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -86,7 +91,7 @@ class Player {
                     int vx = in.nextInt(); // velocity
                     int vy = in.nextInt(); // velocity
                     int state = in.nextInt(); // 1 if the wizard is holding a Snaffle, 0 otherwise
-                    System.err.println(entityId + " " + entityType + " " + x + " " + y + " " + vx + " " + vy + " " + state + " " + lastObliviate + " " + lastFlipendo);
+                    System.err.println(entityId + " " + entityType + " " + x + " " + y + " " + vx + " " + vy + " " + state + " " + lastObliviate + " " + lastFlipendo + " " + lastPetrificus);
                     Entity entity;
                     if ("WIZARD".equals(entityType)) {
                         entity = new Wizard(entityId, entityType, x, y, vx, vy, state);
@@ -128,6 +133,23 @@ class Player {
         if (wizard.hasBall()) {
             wizard.setMove(throwWithVector(wizard, opponents, bludgers));
         } else {
+            TreeMap<Double, Ball> ballsToPetrificus = new TreeMap<>();
+            for (Ball ball : balls.values()) {
+                if (team == 1) {
+                    if (ball.getVx() < -1000) {
+                        ballsToPetrificus.put(Point.distance(ball.getX(), ball.getY(), 0, 3750), ball);
+                    }
+                } else {
+                    if (ball.getVx() > 1000) {
+                        ballsToPetrificus.put(Point.distance(ball.getX(), ball.getY(), 16000, 3750), ball);
+                    }
+                }
+            }
+            if (!ballsToPetrificus.isEmpty() && lastPetrificus > 10) {
+                lastPetrificus = 0;
+                wizard.setMove("PETRIFICUS " + ballsToPetrificus.pollFirstEntry().getValue().getEntityId());
+                return;
+            }
             TreeMap<Double, Ball> ballsToFlipendo = new TreeMap<>();
             for (Ball ball : balls.values()) {
                 boolean goodShot = false;
@@ -138,10 +160,10 @@ class Player {
                 long angleToBottomUpper = Math.round(toAngle(wizard.getPoint(), bottomBorderUpper) + 180);
                 long angleToTopUnder = Math.round(toAngle(wizard.getPoint(), topBorderUnder) + 180);
                 long angleToBottomUnder = Math.round(toAngle(wizard.getPoint(), bottomBorderUnder) + 180);
-                if ( isBetween(angleToBall, angleToTop, angleToBottom) ||
-                        (isBetween(angleToBall, angleToTopUpper, angleToBottomUpper) && ball.getX() > 2000) ||
-                        (isBetween(angleToBall, angleToTopUnder, angleToBottomUnder) && ball.getX() < 5500)) {
-                    if (wizard.isCloseTo(ball.getPoint(), 5000)) {
+                if (isBetween(angleToBall, angleToTop, angleToBottom) ||
+                        (isBetween(angleToBall, angleToTopUpper, angleToBottomUpper) && ball.getX() > 3000) ||
+                        (isBetween(angleToBall, angleToTopUnder, angleToBottomUnder) && ball.getX() < 4500)) {
+                    if (wizard.isCloseTo(ball.getPoint(), 6000)) {
                         goodShot = true;
                         for (Wizard opponent : opponents.values()) {
                             long angleToOpponent = Math.round(toAngle(wizard.getPoint(), opponent.getPoint()) + 180);
@@ -181,6 +203,7 @@ class Player {
             // }
             lastObliviate++;
             lastFlipendo++;
+            lastPetrificus++;
             TreeMap<Double, Wizard> distancesToOpponents = new TreeMap<>();
             for (Wizard opponent : opponents.values()) {
                 if (opponent == null) continue;
@@ -209,7 +232,7 @@ class Player {
                 closest = distances.pollFirstEntry().getValue();
             } while (!distances.isEmpty() && closest.taken());
             closest.setTaken(true);
-            wizard.setMove(createMove(wizard.getPoint(), closest.getPoint()));
+            wizard.setMove(createMove(wizard.getPoint(), closest.getPointWithVector()));
         }
     }
 
@@ -414,6 +437,10 @@ class Entity {
 
     public Point getPoint() {
         return new Point(x, y);
+    }
+
+    public Point getPointWithVector() {
+        return new Point(x + vx * 5, y + vy * 5);
     }
 
     public Point getVector() {
