@@ -42,14 +42,12 @@ public class MainWindow {
     private JLabel nameLabel;
     private JLabel currentNumberLabel;
     private JLabel modeLabel;
-    private JLabel maxWidthLabel;
-    private JLabel maxHeightLabel;
+    private JLabel maxSizeLabel;
     private JLabel qualityLabel;
     private JList listOfFiles;
     private JTextField targetDirectoryTextField;
     private JCheckBox changeSizeCheckBox;
-    private JTextField maxWidthTextField;
-    private JTextField maxHeightTextField;
+    private JTextField maxSizeTextField;
     private JButton targetDirectoryButton;
     private JTextField prefixTextField;
     private JSpinner currentNumberSpinner;
@@ -59,7 +57,8 @@ public class MainWindow {
     private JScrollPane previewScroll;
     private JButton fire;
     private JProgressBar progress;
-    private JButton chooseGalleryButton;
+    private JComboBox chooseSizeComboBox;
+    private JLabel chooseSize;
     private DefaultListModel model;
 
     public MainWindow() {
@@ -69,6 +68,7 @@ public class MainWindow {
         modeComboBox.setModel(new DefaultComboBoxModel<>(Scalr.Mode.values()));
         modeComboBox.setSelectedItem(Scalr.Mode.AUTOMATIC);
         listOfFiles.setModel(new DefaultListModel<String>());
+        targetDirectoryTextField.setText(System.getProperty("user.home") + "\\Desktop\\Zdjecia");
         targetDirectoryButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -85,14 +85,25 @@ public class MainWindow {
         changeSizeCheckBox.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                maxHeightLabel.setEnabled(changeSizeCheckBox.isSelected());
-                maxHeightTextField.setEnabled(changeSizeCheckBox.isSelected());
-                maxWidthLabel.setEnabled(changeSizeCheckBox.isSelected());
-                maxWidthTextField.setEnabled(changeSizeCheckBox.isSelected());
+                maxSizeLabel.setEnabled(changeSizeCheckBox.isSelected());
+                maxSizeTextField.setEnabled(changeSizeCheckBox.isSelected());
+                chooseSize.setEnabled(changeSizeCheckBox.isSelected());
+                chooseSizeComboBox.setEnabled(changeSizeCheckBox.isSelected());
                 qualityLabel.setEnabled(changeSizeCheckBox.isSelected());
                 qualityComboBox.setEnabled(changeSizeCheckBox.isSelected());
                 modeLabel.setEnabled(changeSizeCheckBox.isSelected());
                 modeComboBox.setEnabled(changeSizeCheckBox.isSelected());
+            }
+        });
+        chooseSizeComboBox.addItem("HD Ready (1280×720)");
+        chooseSizeComboBox.addItem("Full HD (1920×1080)");
+        chooseSizeComboBox.addItem("QXGA (2048×1536)");
+        chooseSizeComboBox.addItem("4K (4096×2304)");
+        chooseSizeComboBox.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String item = (String) chooseSizeComboBox.getSelectedItem();
+                maxSizeTextField.setText(item.replaceAll(".*\\((.*)×.*\\)", "$1"));
             }
         });
         JComponent comp = currentNumberSpinner.getEditor();
@@ -145,6 +156,17 @@ public class MainWindow {
 
             }
         });
+    }
+
+    public static void main(String[] args) throws Exception {
+        UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        JFrame frame = new JFrame("MainWindow");
+        frame.setLocationByPlatform(true);
+        frame.setContentPane(new MainWindow().mainPanel);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setMinimumSize(new Dimension(800, 600));
+        frame.pack();
+        frame.setVisible(true);
     }
 
     private void log(String message) {
@@ -241,26 +263,19 @@ public class MainWindow {
         changeSizeCheckBox = new JCheckBox();
         changeSizeCheckBox.setText("Zmień rozmiar zdjęcia");
         mainPanel.add(changeSizeCheckBox, new GridConstraints(3, 0, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        maxWidthLabel = new JLabel();
-        maxWidthLabel.setEnabled(false);
-        maxWidthLabel.setText("Max szerokość");
-        mainPanel.add(maxWidthLabel, new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        maxWidthTextField = new JTextField();
-        maxWidthTextField.setEnabled(false);
-        mainPanel.add(maxWidthTextField, new GridConstraints(4, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(180, 24), null, 0, false));
-        maxHeightLabel = new JLabel();
-        maxHeightLabel.setEnabled(false);
-        maxHeightLabel.setText("Max wysokość");
-        mainPanel.add(maxHeightLabel, new GridConstraints(4, 2, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        maxHeightTextField = new JTextField();
-        maxHeightTextField.setEnabled(false);
-        mainPanel.add(maxHeightTextField, new GridConstraints(4, 3, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+        maxSizeLabel = new JLabel();
+        maxSizeLabel.setEnabled(false);
+        maxSizeLabel.setText("Max szer. wys.");
+        mainPanel.add(maxSizeLabel, new GridConstraints(4, 2, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(76, 24), null, 0, false));
+        maxSizeTextField = new JTextField();
+        maxSizeTextField.setEnabled(false);
+        mainPanel.add(maxSizeTextField, new GridConstraints(4, 3, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, 24), null, 0, false));
         targetDirectoryButton = new JButton();
         targetDirectoryButton.setText("Wybierz");
         mainPanel.add(targetDirectoryButton, new GridConstraints(2, 3, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         nameLabel = new JLabel();
         nameLabel.setText("Nazwa dla zdjęć");
-        mainPanel.add(nameLabel, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        mainPanel.add(nameLabel, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(113, 16), null, 0, false));
         prefixTextField = new JTextField();
         prefixTextField.setText("Przykład_000");
         mainPanel.add(prefixTextField, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(180, 24), null, 0, false));
@@ -283,7 +298,7 @@ public class MainWindow {
         modeLabel = new JLabel();
         modeLabel.setEnabled(false);
         modeLabel.setText("Tryb");
-        mainPanel.add(modeLabel, new GridConstraints(5, 0, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        mainPanel.add(modeLabel, new GridConstraints(5, 0, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(113, 16), null, 0, false));
         modeComboBox = new JComboBox();
         modeComboBox.setEnabled(false);
         mainPanel.add(modeComboBox, new GridConstraints(5, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
@@ -303,6 +318,13 @@ public class MainWindow {
         mainPanel.add(fire, new GridConstraints(8, 0, 1, 4, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         progress = new JProgressBar();
         mainPanel.add(progress, new GridConstraints(7, 0, 1, 4, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        chooseSizeComboBox = new JComboBox();
+        chooseSizeComboBox.setEnabled(false);
+        mainPanel.add(chooseSizeComboBox, new GridConstraints(4, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        chooseSize = new JLabel();
+        chooseSize.setEnabled(false);
+        chooseSize.setText("Wybierz rozmiar");
+        mainPanel.add(chooseSize, new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(113, 16), null, 0, false));
     }
 
     /**
@@ -465,11 +487,9 @@ public class MainWindow {
                 fire.setEnabled(false);
                 boolean resize = changeSizeCheckBox.isSelected();
                 boolean keepOriginal = keepOryginalCheckBox.isSelected();
-                int maxWidth = 0;
-                int maxHeight = 0;
+                int maxSize = 0;
                 if (resize) {
-                    maxWidth = Integer.valueOf(maxWidthTextField.getText());
-                    maxHeight = Integer.valueOf(maxHeightTextField.getText());
+                    maxSize = Integer.parseInt((String) chooseSizeComboBox.getSelectedItem());
                 }
                 String newPath = targetDirectoryTextField.getText() + "\\" + prefixTextField.getText();
 
@@ -478,18 +498,18 @@ public class MainWindow {
                     File file = new File(image.getPath());
 
                     File newFile = new File(currentNumber(newPath) + ".jpg");
-                    File newFilea = new File(currentNumber(newPath) + "T.jpg");
-
+                    if (!newFile.getParentFile().exists()) newFile.getParentFile().mkdirs();
                     try {
                         if (resize) {
                             ImageInputStream inputStream = new FileImageInputStream(file);
                             Iterator<ImageReader> readerIterator = ImageIO.getImageReaders(inputStream);
                             ImageReader reader = readerIterator.next();
                             reader.setInput(inputStream);
-                            Iterator<IIOImage> imageIterator = reader.readAll(null);
-                            IIOImage img = imageIterator.next();
+                            IIOImage img = reader.readAll(0, null);
                             BufferedImage srcImage = (BufferedImage) img.getRenderedImage();
-                            BufferedImage resultImage = Scalr.resize(srcImage, (Scalr.Method) qualityComboBox.getSelectedItem(), (Scalr.Mode) modeComboBox.getSelectedItem(), maxWidth, maxHeight);
+                            BufferedImage resultImage = Scalr.resize(srcImage,
+                                    (Scalr.Method) qualityComboBox.getSelectedItem(),
+                                    (Scalr.Mode) modeComboBox.getSelectedItem(), maxSize, maxSize);
                             img.setRenderedImage(resultImage);
                             ImageWriter writer = ImageIO.getImageWriter(reader);
                             ImageOutputStream outputStream = new FileImageOutputStream(newFile);
@@ -543,17 +563,6 @@ public class MainWindow {
             }
             progress.setValue(0);
         }
-    }
-
-    public static void main(String[] args) throws Exception {
-        UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        JFrame frame = new JFrame("MainWindow");
-        frame.setLocationByPlatform(true);
-        frame.setContentPane(new MainWindow().mainPanel);
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setMinimumSize(new Dimension(800, 600));
-        frame.pack();
-        frame.setVisible(true);
     }
 
 }

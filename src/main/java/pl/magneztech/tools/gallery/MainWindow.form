@@ -38,38 +38,21 @@
           <text value="Zmień rozmiar zdjęcia"/>
         </properties>
       </component>
-      <component id="5d947" class="javax.swing.JLabel" binding="maxWidthLabel">
+      <component id="d4690" class="javax.swing.JLabel" binding="maxSizeLabel">
         <constraints>
-          <grid row="4" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="4" fill="0" indent="0" use-parent-layout="false"/>
-        </constraints>
-        <properties>
-          <enabled value="false"/>
-          <text value="Max szerokość"/>
-        </properties>
-      </component>
-      <component id="746d2" class="javax.swing.JTextField" binding="maxWidthTextField">
-        <constraints>
-          <grid row="4" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
-            <preferred-size width="180" height="24"/>
+          <grid row="4" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="4" fill="0" indent="0" use-parent-layout="false">
+            <preferred-size width="76" height="24"/>
           </grid>
         </constraints>
         <properties>
           <enabled value="false"/>
+          <text value="Max szer. wys."/>
         </properties>
       </component>
-      <component id="d4690" class="javax.swing.JLabel" binding="maxHeightLabel">
-        <constraints>
-          <grid row="4" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="4" fill="0" indent="0" use-parent-layout="false"/>
-        </constraints>
-        <properties>
-          <enabled value="false"/>
-          <text value="Max wysokość"/>
-        </properties>
-      </component>
-      <component id="cf3d8" class="javax.swing.JTextField" binding="maxHeightTextField">
+      <component id="cf3d8" class="javax.swing.JTextField" binding="maxSizeTextField">
         <constraints>
           <grid row="4" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
-            <preferred-size width="150" height="-1"/>
+            <preferred-size width="150" height="24"/>
           </grid>
         </constraints>
         <properties>
@@ -86,7 +69,9 @@
       </component>
       <component id="fa98c" class="javax.swing.JLabel" binding="nameLabel">
         <constraints>
-          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="4" fill="0" indent="0" use-parent-layout="false"/>
+          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="4" fill="0" indent="0" use-parent-layout="false">
+            <preferred-size width="113" height="16"/>
+          </grid>
         </constraints>
         <properties>
           <text value="Nazwa dla zdjęć"/>
@@ -146,7 +131,9 @@
       </component>
       <component id="13f8c" class="javax.swing.JLabel" binding="modeLabel">
         <constraints>
-          <grid row="5" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="4" fill="0" indent="0" use-parent-layout="false"/>
+          <grid row="5" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="4" fill="0" indent="0" use-parent-layout="false">
+            <preferred-size width="113" height="16"/>
+          </grid>
         </constraints>
         <properties>
           <enabled value="false"/>
@@ -206,6 +193,25 @@
           <grid row="7" column="0" row-span="1" col-span="4" vsize-policy="0" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
         </constraints>
         <properties/>
+      </component>
+      <component id="8ab84" class="javax.swing.JComboBox" binding="chooseSizeComboBox">
+        <constraints>
+          <grid row="4" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false"/>
+        </constraints>
+        <properties>
+          <enabled value="false"/>
+        </properties>
+      </component>
+      <component id="6a1d9" class="javax.swing.JLabel" binding="chooseSize">
+        <constraints>
+          <grid row="4" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="4" fill="0" indent="0" use-parent-layout="false">
+            <preferred-size width="113" height="16"/>
+          </grid>
+        </constraints>
+        <properties>
+          <enabled value="false"/>
+          <text value="Wybierz rozmiar"/>
+        </properties>
       </component>
     </children>
   </grid>
