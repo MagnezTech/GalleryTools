@@ -93,6 +93,8 @@ public class MainWindow {
                 qualityComboBox.setEnabled(changeSizeCheckBox.isSelected());
                 modeLabel.setEnabled(changeSizeCheckBox.isSelected());
                 modeComboBox.setEnabled(changeSizeCheckBox.isSelected());
+                String item = (String) chooseSizeComboBox.getSelectedItem();
+                maxSizeTextField.setText(item.replaceAll(".*\\((.*)×.*\\)", "$1"));
             }
         });
         chooseSizeComboBox.addItem("HD Ready (1280×720)");
