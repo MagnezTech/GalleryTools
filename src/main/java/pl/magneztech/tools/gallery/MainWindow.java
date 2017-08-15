@@ -489,7 +489,11 @@ public class MainWindow {
                 boolean keepOriginal = keepOryginalCheckBox.isSelected();
                 int maxSize = 0;
                 if (resize) {
-                    maxSize = Integer.parseInt((String) chooseSizeComboBox.getSelectedItem());
+                    try {
+                        maxSize = Integer.parseInt(maxSizeTextField.getText());
+                    } catch (NumberFormatException e) {
+                        log("ERROR: Błędna wartość w polu maksymalnego rozmiaru.");
+                    }
                 }
                 String newPath = targetDirectoryTextField.getText() + "\\" + prefixTextField.getText();
 
@@ -505,16 +509,14 @@ public class MainWindow {
                             Iterator<ImageReader> readerIterator = ImageIO.getImageReaders(inputStream);
                             ImageReader reader = readerIterator.next();
                             reader.setInput(inputStream);
-                            IIOImage img = reader.readAll(0, null);
-                            BufferedImage srcImage = (BufferedImage) img.getRenderedImage();
+                            BufferedImage srcImage = reader.read(0);
                             BufferedImage resultImage = Scalr.resize(srcImage,
                                     (Scalr.Method) qualityComboBox.getSelectedItem(),
                                     (Scalr.Mode) modeComboBox.getSelectedItem(), maxSize, maxSize);
-                            img.setRenderedImage(resultImage);
                             ImageWriter writer = ImageIO.getImageWriter(reader);
                             ImageOutputStream outputStream = new FileImageOutputStream(newFile);
                             writer.setOutput(outputStream);
-                            writer.write(img);
+                            writer.write(resultImage);
 
                             if (!keepOriginal) {
                                 file.delete();
