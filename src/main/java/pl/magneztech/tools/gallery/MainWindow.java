@@ -519,7 +519,7 @@ public class MainWindow {
                             ImageOutputStream outputStream = new FileImageOutputStream(newFile);
                             writer.setOutput(outputStream);
                             writer.write(resultImage);
-
+                            outputStream.close();
                             if (!keepOriginal) {
                                 file.delete();
                             }
@@ -541,6 +541,8 @@ public class MainWindow {
                     } catch (Exception ex) {
                         log("BŁĄD: " + ex.toString());
                         ex.printStackTrace();
+                    } finally {
+
                     }
                     percent += perPhoto;
                     progress.setValue((int) Math.round(percent));
